@@ -35,8 +35,15 @@ export function WaitlistForm({ onSuccess }: WaitlistFormProps) {
 
   const mutation = useMutation({
     mutationFn: async (data: InsertWaitlistEntry) => {
-      const response = await apiRequest("POST", "/waitlist", data);
-      return response.json();
+      try {
+        const response = await apiRequest("POST", "/waitlist", data);
+        return response.json();
+      } catch (error) {
+        // For development: log the full URL being called
+        console.log("API Call failed. Expected endpoint: https://dev.melyia.com/api/waitlist");
+        console.log("Request data:", data);
+        throw error;
+      }
     },
     onSuccess: () => {
       setShowSuccess(true);
@@ -49,9 +56,13 @@ export function WaitlistForm({ onSuccess }: WaitlistFormProps) {
     onError: (error) => {
       console.error("Subscription error:", error);
       setShowError(true);
+      
+      // More specific error message
+      const errorMessage = error instanceof Error ? error.message : "Une erreur s'est produite";
+      
       toast({
-        title: "Erreur",
-        description: "Une erreur s'est produite. Veuillez réessayer.",
+        title: "Erreur de connexion",
+        description: `${errorMessage}. Vérifiez que l'endpoint API est configuré.`,
         variant: "destructive",
       });
     },

@@ -1,6 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-const API_BASE_URL = "https://dev.melyia.com/api";
+// You can modify this URL to point to your actual webhook endpoint
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://dev.melyia.com/api";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
