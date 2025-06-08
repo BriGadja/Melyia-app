@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Button } from "@shared/components/ui/button";
-import { Card, CardContent } from "@shared/components/ui/card";
-import { Modal, ModalContent, ModalHeader, ModalTitle } from "@shared/components/ui/modal";
+import { Button } from "../../shared/components/ui/button";
+import { Card, CardContent } from "../../shared/components/ui/card";
+import { Modal, ModalContent, ModalHeader, ModalTitle } from "../../shared/components/ui/modal";
 import { WaitlistForm } from "../components/waitlist-form";
 import {
   MessageCircle,
