@@ -24,10 +24,10 @@ export async function apiRequest(
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 
-export const getQueryFn: <T>(options: {
+export const getQueryFn = <T>(options: {
   on401: UnauthorizedBehavior;
-}) => (context: { queryKey: readonly unknown[] }) => Promise<T> = ({ on401 }) => {
-  return async ({ queryKey }) => {
+}) => {
+  return async ({ queryKey }: { queryKey: readonly unknown[] }): Promise<T> => {
     const [url] = queryKey as [string];
     
     try {
@@ -38,7 +38,7 @@ export const getQueryFn: <T>(options: {
       });
 
       if (response.status === 401) {
-        if (on401 === "returnNull") {
+        if (options.on401 === "returnNull") {
           return null as T;
         } else {
           throw new Error("Unauthorized");
