@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "../../shared/components/ui/button";
-import { Input } from "../../shared/components/ui/input";
-import { Textarea } from "../../shared/components/ui/textarea";
-import { Label } from "../../shared/components/ui/label";
-import { useToast } from "../../shared/hooks/use-toast";
-import { apiRequest } from "../../shared/lib/queryClient";
+import { Button } from "@shared/components/ui/button";
+import { Input } from "@shared/components/ui/input";
+import { Textarea } from "@shared/components/ui/textarea";
+import { Label } from "@shared/components/ui/label";
+import { useToast } from "@shared/hooks/use-toast";
+import { apiRequest } from "@shared/lib/queryClient";
 import { CheckCircle, Loader2, Gift, AlertCircle } from "lucide-react";
 
 // Types locaux pour le formulaire waitlist (remplace @shared/schema)
