@@ -1,0 +1,44 @@
+﻿name: 🧪 Tests & Quality
+
+on:
+  push:
+    branches: [ main, dev, 'feature/**' ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  test:
+    name: 🧪 Run Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🟢 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.14.0'
+        cache: 'npm'
+    
+    - name: 📦 Install dependencies
+      run: npm ci
+    
+    - name: 🔍 Type Check
+      run: npm run type-check
+      continue-on-error: true
+    
+    - name: 🧹 Lint Check
+      run: npm run lint
+      continue-on-error: true
+    
+    - name: 🏗️ Build Test
+      run: |
+        npm run build:landing
+        npm run build:app
+    
+    - name: 📊 Build Size Analysis
+      run: |
+        echo "📊 Build Sizes:"
+        du -sh dist/landing/ || echo "Landing build not found"
+        du -sh dist/app/ || echo "App build not found"

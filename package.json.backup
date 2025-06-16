@@ -1,7 +1,6 @@
 {
-  "name": "melyia-app",
-  "version": "20.0.0",
-  "description": "Application SaaS Dentaire avec IA - Landing + Auth + Chatbot",
+  "name": "rest-express",
+  "version": "1.0.0",
   "type": "module",
   "license": "MIT",
   "scripts": {
@@ -13,11 +12,7 @@
     "build:app": "vite build --mode app",
     "preview": "vite preview",
     "deploy:landing": "npm run build:landing && node deploy-to-dev.js",
-    "deploy:app": "npm run build:app && node deploy-to-app-dev.js",
-    "type-check": "tsc --noEmit",
-    "lint": "echo 'Lint check - TODO: setup ESLint'",
-    "test": "echo 'Tests - TODO: setup Vitest'",
-    "ci:deploy": "npm run build && npm run deploy:landing && npm run deploy:app"
+    "deploy:app": "npm run build:app && node deploy-to-app-dev.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
