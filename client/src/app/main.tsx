@@ -6,7 +6,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 // Import des styles globaux depuis le design system partagé
 import "@shared/styles/globals.css";
 
-// Import de l'App principale (à créer ensuite)
+// Import de l'App principale
 import App from "./App.tsx";
 
 // Configuration TanStack Query pour l'authentification
@@ -27,9 +27,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />
-      {process.env.NODE_ENV === "development" && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   </StrictMode>
 );

@@ -1,0 +1,474 @@
+# PROJET MELYIA - Application SaaS Dentaire v17.0
+
+# Configuration Cursor AI pour développement médical + chatbot backend
+
+## STACK TECHNIQUE
+
+- Frontend: React 18 + TypeScript + Vite
+- Backend: Express.js + JWT + PostgreSQL + pgvector
+- IA Local: Ollama llama3.2:3b (100% local HDS)
+- Design: Radix UI + Tailwind CSS + CVA variants
+- State: TanStack Query + Context React
+- Database: PostgreSQL 15.13 + pgvector pour embeddings
+
+## ARCHITECTURE BACKEND ACTUELLE
+
+### Structure Fichiers Backend
+
+```
+/var/www/melyia/app-dev/
+├── server.js                 # Backend principal (Express + toutes routes)
+├── package.json              # Dépendances NPM
+├── .env                      # Variables environnement
+├── uploads/                  # Temp uploads (deprecated)
+└── documents/               # Documents patients (deprecated - moved to /var/www/melyia/documents/)
+```
+
+### Services Backend (ÉTAT FINAL - AUDIT 14/06/2025)
+
+- **✅ PM2 Services OPÉRATIONNELS** : 3 services en ligne
+  - **melyia-app** (PID 1018979) : Production (port 8080) - 83MB RAM
+  - **melyia-dev** (PID 1550220) : Développement (port 8081) - 84MB RAM
+  - **melyia-auth-dev** (PID 2924525) : **Backend principal (port 8083) - 90MB RAM**
+- **✅ N8N Nettoyé** : 17 containers morts supprimés, plus d'instabilité
+- **✅ Permissions PostgreSQL CORRIGÉES** : chat_conversations accessible en écriture
+- Base: melyia_dev (PostgreSQL) ✅ OPÉRATIONNEL
+- Logs: /var/log/melyia/auth-dev-\*.log ✅ ACTIFS
+
+### API Endpoints Existants (VALIDÉS AUDIT 14/06/2025)
+
+```
+# Authentification ✅ FONCTIONNEL
+POST /api/auth/login          # Connexion JWT (validé)
+POST /api/auth/register       # Inscription + profils auto
+GET  /api/auth/verify         # Vérification token
+
+# Patients (dentiste only) ✅ FONCTIONNEL
+GET  /api/patients           # Liste patients du dentiste
+
+# Documents (dentiste only) ✅ FONCTIONNEL
+POST /api/documents/upload   # Upload multi-files avec validation
+
+# Chatbot (patient only) ✅ FONCTIONNEL avec sauvegarde opérationnelle
+POST /api/chat              # Conversation avec Ollama local (architecture: DIRECT_OLLAMA_KEEPALIVE)
+
+# Health & Deploy ✅ VALIDÉ
+GET  /api/health            # Status backend + services (database + ollama connected)
+POST /hooks/deploy          # Webhook déploiement (token auth)
+
+# ✅ RÉSOLU: Permissions PostgreSQL corrigées
+# Table chat_conversations maintenant accessible en écriture
+```
+
+### Base de Données Structure
+
+```sql
+-- Tables auth (EXISTANTES)
+users                       # Utilisateurs (dentist/patient)
+├── dentist_profiles       # Profils dentistes
+└── patient_profiles       # Profils patients
+
+-- Tables chatbot (EXISTANTES)
+patient_documents          # Documents + embeddings vectoriels
+├── file_path VARCHAR(500) # /var/www/melyia/documents/nom-unique
+├── content TEXT           # Contenu extrait
+├── embedding VECTOR(1536) # pgvector embeddings
+└── metadata JSONB         # Infos contextuelles
+
+chat_conversations         # Historique conversations
+├── patient_id -> users(id)
+├── dentist_id -> users(id)
+├── message TEXT           # Question patient
+├── response TEXT          # Réponse IA
+└── context_documents INT[] # Documents utilisés
+```
+
+## DÉVELOPPEMENT CHATBOT BACKEND
+
+### Patterns Code Backend Express
+
+```javascript
+// Structure route type
+app.post("/api/chat", authenticateToken, async (req, res) => {
+  try {
+    const { message, patientId } = req.body;
+    const userId = req.user.id; // JWT user
+
+    // 1. Validation permissions (patient peut chat sur ses docs only)
+    // 2. Recherche vectorielle documents pertinents
+    // 3. Construction prompt avec contexte
+    // 4. Appel Ollama local (127.0.0.1:11434)
+    // 5. Sauvegarde conversation + audit trail
+
+    res.json({ response, confidence, sources, conversationId });
+  } catch (error) {
+    // Logging + gestion erreurs standard
+  }
+});
+```
+
+### Middleware Sécurité
+
+```javascript
+// JWT Authentication (EXISTANT)
+function authenticateToken(req, res, next) {
+  const token = req.headers.authorization?.split(" ")[1];
+  // Vérification JWT + injection req.user
+}
+
+// Role-based access (À IMPLÉMENTER)
+function requireRole(role) {
+  return (req, res, next) => {
+    if (req.user.role !== role)
+      return res.status(403).json({ error: "Forbidden" });
+    next();
+  };
+}
+```
+
+### Ollama Integration (PERFORMANCE EXCELLENTE ✅)
+
+```javascript
+// Appel Ollama local (OPTIMISÉ - 2s de réponse confirmé audit)
+const ollamaResponse = await axios.post("http://127.0.0.1:11434/api/generate", {
+  model: "llama3.2:3b",
+  prompt: constructedPrompt,
+  stream: false,
+  options: {
+    temperature: 0.7,
+    num_predict: 500,
+    // Configuration optimisée détectée lors audit
+    num_ctx: 4096,
+    num_batch: 512,
+    num_thread: 2,
+  },
+});
+
+// Monitoring Ollama (processus détectés audit)
+// PID Principal: 2922333 (347MB RAM)
+// PID Runner: 2956150 (2.5GB RAM)
+// Performance: ~2s par requête (excellent vs 73s documenté)
+```
+
+## FRONTEND STRUCTURE MULTI-APP
+
+### Architecture Frontend
+
+```
+client/src/
+├── shared/                 # Design system centralisé
+│   ├── components/ui/     # 45+ composants Radix UI + Tailwind
+│   ├── hooks/             # Hooks réutilisables
+│   ├── lib/               # Utils (queryClient, auth, etc.)
+│   └── styles/globals.css # Thème médical + animations
+
+├── landing/               # Landing page marketing
+│   ├── components/
+│   ├── pages/home.tsx
+│   └── App.tsx
+
+└── app/                   # Application authentifiée
+    ├── components/
+    │   ├── auth/          # Composants authentification
+    │   ├── dashboard/     # Dashboards par rôle
+    │   ├── upload/        # Upload documents (EXISTANT)
+    │   └── chatbot/       # Interface chat (EXISTANT basique)
+    ├── pages/
+    │   ├── auth/          # login.tsx, register.tsx
+    │   ├── dentist/       # dashboard.tsx + supervision
+    │   ├── patient/       # dashboard.tsx + chat
+    │   └── admin/         # (À CRÉER) Config chatbot
+    ├── context/           # AuthContext + ChatbotContext
+    └── App.tsx            # Router principal
+```
+
+### Composants Chatbot Existants (À ÉTENDRE)
+
+```tsx
+// client/src/app/components/chatbot/
+ChatContainer.tsx          # Container principal chat
+ChatMessage.tsx           # Bulle message individuelle
+ChatInput.tsx             # Zone saisie + validation
+TypingIndicator.tsx       # Indicateur "IA écrit..."
+```
+
+## CONVENTIONS DÉVELOPPEMENT
+
+### Nomenclature
+
+- **Fichiers**: kebab-case (chat-container.tsx)
+- **Composants**: PascalCase (ChatContainer)
+- **Variables**: camelCase (patientId)
+- **Constants**: UPPER_SNAKE_CASE (OLLAMA_HOST)
+- **API routes**: lowercase (/api/chat/send)
+
+### Patterns TypeScript
+
+```typescript
+// Interfaces props suffixées
+interface ChatMessageProps {
+  message: ChatMessage;
+  isTyping?: boolean;
+}
+
+// Types métier préfixés
+type ChatRole = "user" | "assistant" | "system";
+type DocumentType = "plan_traitement" | "note_operation" | "radiographie";
+
+// API Response types
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+```
+
+### Gestion d'État
+
+```tsx
+// TanStack Query pour API calls
+const { data: conversations, isLoading } = useQuery({
+  queryKey: ["chat", "history", patientId],
+  queryFn: () => fetchChatHistory(patientId),
+});
+
+// Context pour état global
+const { user, isAuthenticated } = useAuth();
+```
+
+## PRIORITÉS DÉVELOPPEMENT v17 (ÉTAT FINAL - 14/06/2025)
+
+### 🔴 RESTANT CRITIQUE - Sécurité
+
+1. **Headers sécurité**: Ajouter fichier /tmp/security_headers.conf dans nginx
+2. **Monitoring optimisé**: Exploiter architecture DIRECT_OLLAMA_KEEPALIVE
+3. **Gestion timeouts**: Réduire timeout 120s → 30s max
+4. **Tests conversation**: Valider sauvegarde avec permissions corrigées
+
+### 🟡 Performance Ollama (OPTIMALE ✅)
+
+1. **Performance excellente**: 2s de réponse + keep-alive permanent
+2. **Architecture validée**: DIRECT_OLLAMA_KEEPALIVE opérationnelle
+3. **Cache intelligent**: Exploiter keep-alive pour réponses instantanées
+4. **Sauvegarde conversations**: ✅ OPÉRATIONNELLE (permissions OK)
+
+### 🟢 Interface Admin Chatbot
+
+1. **Configuration modèle**: Exploiter architecture keep-alive optimisée
+2. **Templates réponses**: Réduire charge Ollama avec réponses prédéfinies
+3. **Analytics conversations**: Dashboard avec données réelles (sauvegarde OK)
+4. **Monitoring temps réel**: Dashboard performance backend + Ollama
+
+### 🔵 Frontend Enhancement
+
+1. **Streaming optimisé**: Exploiter performance 2s pour UX quasi-instantanée
+2. **Feedback intelligent**: Rating + amélioration continue templates
+3. **Cache frontend**: Réponses fréquentes côté client
+4. **Error handling**: Gestion timeout graceful + fallback
+
+## BONNES PRATIQUES MÉDICALES
+
+### Sécurité HDS
+
+- **100% local**: Aucune API externe (OpenAI supprimé)
+- **Audit trail**: Traçabilité complète conversations
+- **Anonymisation**: Données sensibles avant traitement
+- **Chiffrement**: Transit + repos données patients
+
+### Validation Données
+
+- **Input sanitization**: Prévention injection
+- **Rate limiting**: 20 messages/minute/patient
+- **Content filtering**: Détection contenu inapproprié
+- **Emergency detection**: Mots-clés urgence médicale
+
+### Performance
+
+- **Objectif latence**: <10s réponse IA
+- **Cache hit rate**: >70% réponses courantes
+- **Monitoring**: Alertes si performance dégradée
+- **Fallback**: Réponses prédéfinies si Ollama lent
+
+## COMMANDES DÉVELOPPEMENT (ÉTAT FINAL)
+
+### Backend Services - ÉTAT OPTIMAL ✅
+
+```bash
+# Services PM2 fonctionnels + permissions OK
+pm2 list  # 3 services online
+pm2 logs melyia-auth-dev --lines 10
+
+# Test sauvegarde conversation (permissions corrigées)
+curl -X POST https://app-dev.melyia.com/api/chat \
+  -H "Authorization: Bearer JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"message":"Test sauvegarde","patientId":"10"}'
+
+# Monitoring performance
+curl -s https://app-dev.melyia.com/api/health | jq
+# Résultat: {"status":"OK","architecture":"DIRECT_OLLAMA_KEEPALIVE"}
+```
+
+### Frontend Local (Cursor) - INCHANGÉ
+
+```bash
+# Dans environnement Cursor Windows
+npm run dev:app          # http://localhost:5173 (app auth)
+npm run deploy:app       # Deploy vers app-dev.melyia.com
+```
+
+### Ollama Local - PERFORMANCE EXCELLENTE ✅
+
+```bash
+# Architecture DIRECT_OLLAMA_KEEPALIVE validée
+curl -s http://127.0.0.1:11434/api/version | jq
+# Ollama garde le modèle en mémoire (keep-alive permanent)
+
+# Test performance optimisée
+time curl -s -X POST http://127.0.0.1:11434/api/generate \
+  -H "Content-Type: application/json" \
+  -d '{"model":"llama3.2:3b","prompt":"Test médical rapide","stream":false}' | jq -r '.response'
+
+# Monitoring (3 processus optimisés)
+ps aux | grep ollama | grep -v grep
+# PID 2922333: Serveur Ollama (347MB)
+# PID 2956150: Runner modèle (2.5GB keep-alive)
+```
+
+### Headers Sécurité - PRÉPARÉ
+
+```bash
+# Headers sécurité générés dans /tmp/security_headers.conf
+# À ajouter manuellement dans config nginx app-dev.melyia.com
+
+cat /tmp/security_headers.conf
+# Contient: HSTS, X-Frame-Options, CSP, etc.
+```
+
+## DÉPLOIEMENT & TESTS
+
+### Workflow Dev → Prod
+
+1. **Développement local**: Cursor Pro + hot reload
+2. **Build**: npm run build:app
+3. **Deploy**: npm run deploy:app (webhook sécurisé)
+4. **Test**: Interface app-dev.melyia.com
+5. **Validation**: Tests auth + chat + upload
+
+### Tests Automatisés
+
+```bash
+# Tests backend critiques
+curl https://app-dev.melyia.com/api/health
+curl -X POST https://app-dev.melyia.com/api/chat \
+  -H "Authorization: Bearer $JWT_TOKEN" \
+  -d '{"message":"Test","patientId":"10"}'
+```
+
+## MONITORING & LOGS
+
+### Logs Backend
+
+```bash
+# Logs services critiques
+pm2 logs melyia-auth-dev --lines 50
+tail -f /var/log/nginx/app-dev_access.log
+sudo tail -f /var/log/postgresql/postgresql-15-main.log
+```
+
+### Métriques Performance
+
+```bash
+# Usage ressources temps réel
+watch -n 5 'free -h | grep Mem; ps aux | grep ollama | grep -v grep'
+# Base données
+sudo -u postgres psql -d melyia_dev -c "SELECT COUNT(*) FROM chat_conversations;"
+```
+
+## OBJECTIFS v17.0 (ÉTAT FINAL)
+
+### Performance ✅ ATTEINTS
+
+- **Réponse IA**: 2s (objectif <10s LARGEMENT DÉPASSÉ)
+- **Architecture**: DIRECT_OLLAMA_KEEPALIVE optimale
+- **Uptime**: >99.9% disponibilité chatbot validée
+- **Sauvegarde**: ✅ OPÉRATIONNELLE (permissions corrigées)
+
+### Fonctionnalités À DÉVELOPPER
+
+- **Interface admin**: Configuration IA sans code
+- **Templates**: Réponses prédéfinies par catégorie
+- **Analytics**: Dashboard métier dentistes (base prête)
+- **WebSocket**: Réponses temps réel streaming
+
+### Sécurité HDS ✅ CONFORMITÉ
+
+- **Audit trail**: Conversations tracées (sauvegarde OK)
+- **Performance locale**: 0% dépendance externe
+- **Infrastructure**: PM2 + PostgreSQL + Ollama stable
+- **Headers sécurité**: À déployer (/tmp/security_headers.conf)
+
+## ENVIRONNEMENTS
+
+### Développement
+
+- **Local**: http://localhost:5173 (Cursor + CORS)
+- **API**: https://app-dev.melyia.com/api
+- **Base**: melyia_dev (PostgreSQL + pgvector)
+- **IA**: http://127.0.0.1:11434 (Ollama local)
+
+### Production (Cible)
+
+- **Frontend**: https://app.melyia.com
+- **API**: https://app.melyia.com/api
+- **Base**: melyia_db (migration prévue)
+- **Monitoring**: Prometheus + Grafana
+
+## AIDE-MÉMOIRE DÉVELOPPEMENT
+
+### Génération Composants IA
+
+```
+Ctrl+K : "Créer composant React TypeScript [nom] pour application médicale -
+Design Radix UI + Tailwind médical, props typées, accessibilité WCAG,
+gestion erreurs + loading, tests unitaires"
+```
+
+### Patterns Backend Express
+
+```
+Ctrl+K : "Créer route Express /api/[endpoint] pour SaaS dentaire -
+Authentification JWT, validation stricte, gestion erreurs,
+logs audit, PostgreSQL + pgvector, conformité HDS"
+```
+
+### Debug Chatbot
+
+```
+Ctrl+K : "Analyser problème performance chatbot Ollama -
+Optimisation prompt, cache intelligent, monitoring,
+fallback réponses, error handling robuste"
+```
+
+## RESSOURCES INTERNES
+
+### Documentation
+
+- Architecture: /docs/architecture-v17.md
+- API: /docs/api-endpoints.md
+- Deploy: /docs/deployment-guide.md
+- Security: /docs/hds-compliance.md
+
+### Configuration
+
+- Nginx: /etc/nginx/sites-enabled/app-dev.conf
+- PM2: ~/.pm2/ecosystem.config.js
+- PostgreSQL: /var/lib/postgresql/15/main/
+- Ollama: ~/.ollama/models/
+
+### Monitoring
+
+- Logs: /var/log/melyia/
+- Metrics: /var/log/melyia/audit/
+- Backups: /var/www/melyia/backups/
+- Health: https://app-dev.melyia.com/api/health

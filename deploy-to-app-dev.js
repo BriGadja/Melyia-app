@@ -1,103 +1,99 @@
+﻿import axios from "axios";
+import FormData from "form-data";
 import fs from "fs";
 import path from "path";
-import FormData from "form-data";
+import { fileURLToPath } from "url";
 
-// Configuration
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const WEBHOOK_URL = "https://app-dev.melyia.com/hooks/deploy";
 const WEBHOOK_TOKEN =
   "2bce1774a17bf4a01b21798780481413a9872b27c457b7c778e7c157125a6410";
-const DIST_DIR = path.join(process.cwd(), "dist", "app");
 
 async function deployToAppDev() {
-  console.log(
-    "🚀 Déploiement Application Authentification vers app-dev.melyia.com...",
-  );
-
   try {
-    // Vérifier que le build existe
-    if (!fs.existsSync(DIST_DIR)) {
-      console.error("❌ Erreur: Le dossier dist/app/ n'existe pas.");
-      console.log("💡 Exécutez d'abord: npm run build:app");
-      process.exit(1);
+    console.log(
+      "🚀 Déploiement Application Authentification vers app-dev.melyia.com..."
+    );
+
+    const buildDir = path.join(__dirname, "dist/app");
+
+    if (!fs.existsSync(buildDir)) {
+      throw new Error(
+        "Le répertoire de build n'existe pas. Lancez d'abord npm run build:app"
+      );
     }
 
-    // Lister les fichiers à déployer
-    const files = fs
-      .readdirSync(DIST_DIR, { recursive: true })
-      .filter((file) => {
-        const filePath = path.join(DIST_DIR, file);
-        return fs.statSync(filePath).isFile();
+    const formData = new FormData();
+
+    // Fonction pour ajouter tous les fichiers du répertoire de build
+    function addFilesToFormData(dir, relativePath = "") {
+      const files = fs.readdirSync(dir);
+
+      files.forEach((file) => {
+        const fullPath = path.join(dir, file);
+        const stat = fs.statSync(fullPath);
+
+        if (stat.isDirectory()) {
+          addFilesToFormData(fullPath, path.join(relativePath, file));
+        } else {
+          const fileStream = fs.createReadStream(fullPath);
+          const fileName = relativePath ? path.join(relativePath, file) : file;
+          formData.append("files", fileStream, fileName);
+        }
       });
+    }
 
-    console.log(`📁 Fichiers à déployer: ${files.length}`);
-    files.forEach((file) => console.log(`   - ${file}`));
+    addFilesToFormData(buildDir);
 
-    // Préparer FormData pour l'upload
-    const form = new FormData();
+    // Compter les fichiers
+    const fileCount = formData.getHeaders()["content-length"]
+      ? "multiple"
+      : "unknown";
+    console.log("📁 Fichiers à déployer depuis dist/app/");
 
-    // Ajouter les fichiers au formulaire
+    // Lister les fichiers pour debug
+    const files = fs.readdirSync(buildDir);
     files.forEach((file) => {
-      const filePath = path.join(DIST_DIR, file);
-      const fileContent = fs.readFileSync(filePath);
-
-      // Normaliser le chemin
-      const normalizedPath = file.replace(/\\/g, "/");
-
-      form.append("files", fileContent, {
-        filename: normalizedPath,
-        contentType: getContentType(file),
-      });
+      const fullPath = path.join(buildDir, file);
+      const stat = fs.statSync(fullPath);
+      if (stat.isDirectory()) {
+        const subFiles = fs.readdirSync(fullPath);
+        subFiles.forEach((subFile) => {
+          console.log("   - " + file + "\\" + subFile);
+        });
+      } else {
+        console.log("   - " + file);
+      }
     });
-
-    // Import dynamique de node-fetch
-    const { default: fetch } = await import("node-fetch");
 
     console.log("📤 Upload vers app-dev.melyia.com...");
 
-    // Envoyer la requête
-    const response = await fetch(WEBHOOK_URL, {
-      method: "POST",
+    const response = await axios.post(WEBHOOK_URL, formData, {
       headers: {
-        Authorization: `Bearer ${WEBHOOK_TOKEN}`,
-        ...form.getHeaders(),
+        ...formData.getHeaders(),
+        "X-Webhook-Token": WEBHOOK_TOKEN,
       },
-      body: form,
+      timeout: 30000,
     });
 
-    const result = await response.text();
-
-    if (response.ok) {
+    if (response.status === 200) {
       console.log("✅ Déploiement réussi !");
-      console.log(`🌐 Application disponible sur: https://app-dev.melyia.com`);
-      console.log("📋 Comptes de test:");
-      console.log("   👨‍⚕️ Dentiste: dentiste@melyia.com / test123");
-      console.log("   👤 Patient: patient@melyia.com / test123");
+      console.log("📋 Réponse:", response.data);
+      console.log("🌐 Application disponible sur: https://app-dev.melyia.com");
     } else {
-      console.error("❌ Erreur déploiement:", response.status);
-      console.error("📋 Détails:", result);
+      console.log("❌ Erreur déploiement:", response.status);
+      console.log("📋 Détails:", response.data);
     }
   } catch (error) {
-    console.error("❌ Erreur:", error.message);
+    console.error(
+      "❌ Erreur déploiement:",
+      error.response?.status || error.message
+    );
+    console.error("📋 Détails:", error.response?.data || error.message);
+    process.exit(1);
   }
 }
 
-// Fonction pour déterminer le Content-Type
-function getContentType(filename) {
-  const ext = path.extname(filename).toLowerCase();
-  const mimeTypes = {
-    ".html": "text/html",
-    ".css": "text/css",
-    ".js": "application/javascript",
-    ".json": "application/json",
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".gif": "image/gif",
-    ".svg": "image/svg+xml",
-    ".ico": "image/x-icon",
-  };
-  return mimeTypes[ext] || "application/octet-stream";
-}
-
-// Exécuter le déploiement
 deployToAppDev();

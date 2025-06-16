@@ -1,14 +1,20 @@
-import React, { useState } from 'react';
-import { useLocation } from 'wouter';
-import { useAuth } from '../../context/auth-context';
+import React, { useState } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "../../context/auth-context";
 
 // Composants du design system
-import { Button } from '@shared/components/ui/button';
-import { Input } from '@shared/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@shared/components/ui/card';
-import { Label } from '@shared/components/ui/label';
-import { Alert, AlertDescription } from '@shared/components/ui/alert';
-import { LoadingSpinner } from '@shared/components/ui/loading-spinner';
+import { Button } from "@shared/components/ui/button";
+import { Input } from "@shared/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@shared/components/ui/card";
+import { Label } from "@shared/components/ui/label";
+import { Alert, AlertDescription } from "@shared/components/ui/alert";
+import { LoadingSpinner } from "@shared/components/ui/loading-spinner";
 
 const LoginPage: React.FC = () => {
   const [, setLocation] = useLocation();
@@ -16,19 +22,20 @@ const LoginPage: React.FC = () => {
 
   // État du formulaire avec dentiste par défaut
   const [formData, setFormData] = useState({
-    email: 'dentiste@melyia.com',
-    password: 'test123',
+    email: "dentiste@melyia.com",
+    password: "test123",
   });
 
   // États UI
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const [error, setError] = useState<string>("");
 
   // Redirection si déjà connecté
   React.useEffect(() => {
     if (isAuthenticated && user) {
-      const redirectPath = user.role === 'dentist' ? '/dentist/dashboard' : '/patient/dashboard';
-      console.log('🔄 Redirection vers:', redirectPath);
+      const redirectPath =
+        user.role === "dentist" ? "/dentist/dashboard" : "/patient/dashboard";
+      console.log("🔄 Redirection vers:", redirectPath);
       setLocation(redirectPath);
     }
   }, [isAuthenticated, user, setLocation]);
@@ -36,22 +43,22 @@ const LoginPage: React.FC = () => {
   // Gestion de la soumission du formulaire
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
-      console.log('🔐 Tentative de connexion:', formData.email);
+      console.log("🔐 Tentative de connexion:", formData.email);
       const result = await login(formData.email, formData.password);
 
       if (result.success) {
-        console.log('✅ Connexion réussie !');
+        console.log("✅ Connexion réussie !");
         // Le useEffect ci-dessus gèrera la redirection automatiquement
       } else {
-        setError(result.error || 'Identifiants invalides');
+        setError(result.error || "Identifiants invalides");
       }
     } catch (err) {
-      console.error('❌ Erreur de connexion:', err);
-      setError('Erreur de connexion au serveur');
+      console.error("❌ Erreur de connexion:", err);
+      setError("Erreur de connexion au serveur");
     } finally {
       setIsLoading(false);
     }
@@ -60,23 +67,23 @@ const LoginPage: React.FC = () => {
   // Gestion des changements de champs
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   // Fonction pour remplir rapidement les comptes test
-  const fillTestAccount = (type: 'dentist' | 'patient') => {
-    if (type === 'dentist') {
+  const fillTestAccount = (type: "dentist" | "patient") => {
+    if (type === "dentist") {
       setFormData({
-        email: 'dentiste@melyia.com',
-        password: 'test123'
+        email: "dentiste@melyia.com",
+        password: "test123",
       });
     } else {
       setFormData({
-        email: 'patient@melyia.com',
-        password: 'test123'
+        email: "patient@melyia.com",
+        password: "test123",
       });
     }
   };
@@ -85,9 +92,7 @@ const LoginPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="flex items-center justify-center mb-2">
-            🦷 
-          </div>
+          <div className="flex items-center justify-center mb-2">🦷</div>
           <CardTitle className="text-2xl font-bold text-gray-900">
             Connexion Melyia
           </CardTitle>
@@ -106,13 +111,15 @@ const LoginPage: React.FC = () => {
 
           {/* Boutons comptes test */}
           <div className="bg-blue-50 p-3 rounded-lg space-y-2">
-            <p className="text-sm text-blue-800 font-medium">Comptes de test :</p>
+            <p className="text-sm text-blue-800 font-medium">
+              Comptes de test :
+            </p>
             <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => fillTestAccount('dentist')}
+                onClick={() => fillTestAccount("dentist")}
                 className="flex-1"
                 disabled={isLoading}
               >
@@ -122,7 +129,7 @@ const LoginPage: React.FC = () => {
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => fillTestAccount('patient')}
+                onClick={() => fillTestAccount("patient")}
                 className="flex-1"
                 disabled={isLoading}
               >
@@ -161,25 +168,36 @@ const LoginPage: React.FC = () => {
               />
             </div>
 
-            <Button 
-              type="submit" 
-              className="w-full"
-              disabled={isLoading}
-            >
+            <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <LoadingSpinner size="sm" className="mr-2" />
                   Connexion...
                 </>
               ) : (
-                'Se connecter'
+                "Se connecter"
               )}
             </Button>
           </form>
 
+          {/* Lien vers inscription - NOUVEAU */}
+          <div className="text-center pt-4 border-t border-gray-200">
+            <p className="text-sm text-gray-600">
+              Pas encore de compte ?{" "}
+              <button
+                type="button"
+                onClick={() => setLocation("/register")}
+                className="text-blue-600 hover:text-blue-500 font-medium transition-colors"
+                disabled={isLoading}
+              >
+                Créer un compte
+              </button>
+            </p>
+          </div>
+
           {/* Footer */}
-          <div className="text-center text-sm text-gray-500 pt-4">
-            Environnement de développement v9.0
+          <div className="text-center text-sm text-gray-500 pt-2">
+            Environnement de développement v12.0
           </div>
         </CardContent>
       </Card>

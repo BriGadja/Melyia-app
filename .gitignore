@@ -1,6 +1,57 @@
-node_modules
-dist
+# Mettre à jour le .gitignore pour exclure les fichiers sensibles
+@'
+# Dependencies
+node_modules/
+*/node_modules/
+
+# Production builds
+dist/
+build/
+*/dist/
+*/build/
+
+# Environment files (SENSIBLES - NE PAS COMMITER)
+.env
+.env.local
+.env.production
+.env.development
+*/.env
+*/.env.local
+
+# Logs et audits
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+frontend-audit-*.log
+audit-*.log
+
+# Fichiers temporaires et outils
+.replit
+tmp/
+temp/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
 .DS_Store
-server/public
-vite.config.ts.*
-*.tar.gz
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Cache
+.cache/
+.parcel-cache/
+
+# Documentation auto-generated
+docs/.vuepress/dist
+'@ | Out-File -FilePath ".gitignore" -Encoding UTF8 -Force

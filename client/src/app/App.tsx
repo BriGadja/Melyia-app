@@ -5,8 +5,9 @@ import { AuthProvider, useAuth } from "./context/auth-context";
 // Composant de chargement
 import { LoadingSpinner } from "@shared/components/ui/loading-spinner";
 
-// Pages d'authentification
+// Pages d'authentification (publiques)
 import LoginPage from "./pages/auth/login";
+import Register from "./pages/auth/register";
 
 // Dashboards par rôle
 import DentistDashboard from "./pages/dentist/dashboard";
@@ -98,6 +99,7 @@ const AppRoutes: React.FC = () => {
 
         {/* Routes d'authentification (publiques) */}
         <Route path="/login" component={LoginPage} />
+        <Route path="/register" component={Register} />
 
         {/* Routes protégées - Dentistes */}
         <Route path="/dentist/dashboard">

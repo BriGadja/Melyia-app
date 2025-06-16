@@ -1,5 +1,6 @@
 import React from "react";
 import { useAuth } from "../../context/auth-context";
+import { ChatInterface } from "../../components/chatbot/chat-interface";
 
 // Composants du design system
 import { Button } from "@shared/components/ui/button";
@@ -54,6 +55,20 @@ const PatientDashboard: React.FC = () => {
               bientôt consulter vos documents, rendez-vous et communiquer avec
               votre dentiste.
             </p>
+          </div>
+
+          {/* Assistant IA Médical */}
+          <div className="mt-8 mb-8">
+            <h2 className="text-xl font-semibold mb-4">
+              🤖 Assistant IA Médical
+            </h2>
+            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>🔒 IA 100% Locale</strong> - Vos données restent
+                sécurisées sur nos serveurs
+              </p>
+            </div>
+            <ChatInterface />
           </div>
 
           {/* Grille de cards fonctionnalités */}

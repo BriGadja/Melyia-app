@@ -1,13 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * 🚀 SCRIPT DÉPLOIEMENT REPLIT → DEV.MELYIA.COM
- *
- * Ce script :
- * 1. Build le frontend React avec Vite
- * 2. Collecte les fichiers générés dans dist/public/
- * 3. Les envoie au webhook avec authentification
- * 4. Affiche le résultat
+ * 🚀 SCRIPT DÉPLOIEMENT CURSOR → DEV.MELYIA.COM
+ * Adapté pour la configuration Vite multi-app de Melyia
  */
 
 import { execSync } from "child_process";
@@ -16,14 +11,14 @@ import path from "path";
 import FormData from "form-data";
 import fetch from "node-fetch";
 
-// Configuration adaptée à ton projet Replit
+// Configuration corrigée pour votre projet Cursor
 const CONFIG = {
   WEBHOOK_URL: "https://dev.melyia.com/hooks/deploy",
   WEBHOOK_TOKEN:
     "2bce1774a17bf4a01b21798780481413a9872b27c457b7c778e7c157125a6410",
-  BUILD_COMMAND: "npm run build",
-  BUILD_DIR: "dist/public",
-  TIMEOUT: 300000, // 5 minutes timeout
+  BUILD_COMMAND: "npm run build:landing", // ✅ Correction 1: commande spécifique
+  BUILD_DIR: "dist/landing", // ✅ Correction 2: répertoire correct
+  TIMEOUT: 300000,
 };
 
 // Couleurs console
@@ -41,10 +36,10 @@ function log(message, color = "reset") {
 }
 
 /**
- * 1. Build du projet Vite
+ * 1. Build du projet Vite en mode landing
  */
 async function buildProject() {
-  log("🏗️  Démarrage du build Vite...", "blue");
+  log("🏗️  Démarrage du build Vite Landing...", "blue");
 
   try {
     // Nettoyer l'ancien build
@@ -53,7 +48,7 @@ async function buildProject() {
       log(`🧹 Ancien build supprimé: ${CONFIG.BUILD_DIR}`, "yellow");
     }
 
-    // Lancer le build
+    // Lancer le build spécifique landing
     log(`⚙️  Commande: ${CONFIG.BUILD_COMMAND}`, "blue");
     execSync(CONFIG.BUILD_COMMAND, {
       stdio: "inherit",
@@ -71,7 +66,21 @@ async function buildProject() {
       throw new Error("index.html non trouvé dans le build");
     }
 
-    log("✅ Build Vite terminé avec succès !", "green");
+    // ✅ Correction 3: Vérifier que le bouton "Se connecter" est présent
+    const indexContent = await fs.readFile(indexPath, "utf8");
+    if (
+      indexContent.includes("Se connecter") ||
+      indexContent.includes("connecter")
+    ) {
+      log("✅ Bouton 'Se connecter' détecté dans le build", "green");
+    } else {
+      log(
+        "⚠️  ATTENTION: Bouton 'Se connecter' non trouvé dans le build",
+        "yellow"
+      );
+    }
+
+    log("✅ Build Vite Landing terminé avec succès !", "green");
     return true;
   } catch (error) {
     log(`❌ Erreur build: ${error.message}`, "red");
@@ -149,41 +158,56 @@ async function deployToServer(files) {
       });
     });
 
-    // Envoi de la requête
+    // ✅ Correction 4: Header webhook corrigé
     log(`📡 Envoi de ${files.length} fichiers...`, "blue");
     const response = await fetch(CONFIG.WEBHOOK_URL, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${CONFIG.WEBHOOK_TOKEN}`,
+        "X-Webhook-Token": CONFIG.WEBHOOK_TOKEN, // Correction header
         ...form.getHeaders(),
       },
       body: form,
       timeout: CONFIG.TIMEOUT,
     });
 
-    const result = await response.json();
+    // ✅ Correction 5: Gérer réponse texte et JSON
+    let result;
+    const contentType = response.headers.get("content-type");
+
+    if (contentType && contentType.includes("application/json")) {
+      result = await response.json();
+    } else {
+      const textResult = await response.text();
+      result = { message: textResult };
+    }
 
     if (response.ok) {
       log("✅ Déploiement réussi !", "green");
       log(`📊 Détails:`, "blue");
-      log(`   - Timestamp: ${result.timestamp}`, "yellow");
-      log(
-        `   - Fichiers déployés: ${result.deployedFiles?.length || 0}`,
-        "yellow",
-      );
-      log(`   - Path serveur: ${result.deployPath}`, "yellow");
+      log(`   - Status: ${response.status}`, "yellow");
+      log(`   - Fichiers déployés: ${files.length}`, "yellow");
+      if (result.deployPath) {
+        log(`   - Path serveur: ${result.deployPath}`, "yellow");
+      }
       if (result.backupPath) {
         log(`   - Backup créé: ${path.basename(result.backupPath)}`, "yellow");
       }
 
-      log("\n🌐 Votre frontend React est maintenant disponible sur:", "green");
+      log("\n🌐 Votre landing page est maintenant disponible sur:", "green");
       log("   https://dev.melyia.com", "cyan");
-      log("\n🎯 Vous pouvez tester vos API calls vers:", "green");
-      log("   https://dev.melyia.com/api/", "cyan");
+      log(
+        "\n💡 Conseil: Videz le cache navigateur (Ctrl+F5) si pas de changement",
+        "yellow"
+      );
 
       return true;
     } else {
-      log(`❌ Erreur serveur (${response.status}): ${result.error}`, "red");
+      log(
+        `❌ Erreur serveur (${response.status}): ${
+          result.error || result.message
+        }`,
+        "red"
+      );
       if (result.details) {
         log(`   Détails: ${result.details}`, "red");
       }
@@ -223,12 +247,12 @@ function getMimeType(filename) {
  * 🚀 FONCTION PRINCIPALE
  */
 async function main() {
-  log("\n🚀 === DÉPLOIEMENT REPLIT → DEV.MELYIA.COM ===\n", "blue");
+  log("\n🚀 === DÉPLOIEMENT CURSOR → DEV.MELYIA.COM ===\n", "blue");
 
   const startTime = Date.now();
 
   try {
-    // 1. Build Vite
+    // 1. Build Vite Landing
     const buildSuccess = await buildProject();
     if (!buildSuccess) {
       process.exit(1);
@@ -250,7 +274,10 @@ async function main() {
     // 4. Succès !
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     log(`\n🎉 Déploiement terminé en ${duration}s !`, "green");
-    log("🔧 Prochaine étape : Tester votre app sur dev.melyia.com", "yellow");
+    log(
+      "🔧 Prochaine étape : Tester votre landing page sur dev.melyia.com",
+      "yellow"
+    );
   } catch (error) {
     log(`\n💥 Erreur fatale: ${error.message}`, "red");
     console.error(error);
