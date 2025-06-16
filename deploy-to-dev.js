@@ -1,87 +1,78 @@
-#!/usr/bin/env node
-
-/**
- * 🚀 SCRIPT DÉPLOIEMENT CURSOR → DEV.MELYIA.COM
- * Adapté pour la configuration Vite multi-app de Melyia
- */
-
-import { execSync } from "child_process";
-import fs from "fs-extra";
+import fs from "fs";
 import path from "path";
 import FormData from "form-data";
 import fetch from "node-fetch";
 
-// Configuration corrigée pour votre projet Cursor
+/**
+ * 🚀 DÉPLOIEMENT CURSOR → DEV.MELYIA.COM (VERSION CORRIGÉE)
+ *
+ * CORRECTIONS v20.1 :
+ * - Configuration selon infrastructure réelle
+ * - Port et endpoints corrigés pour landing page
+ */
+
+// Configuration corrigée pour landing
 const CONFIG = {
-  WEBHOOK_URL: "https://dev.melyia.com/hooks/deploy",
+  SERVER_URL: "https://dev.melyia.com",
+  WEBHOOK_ENDPOINT: "/hooks/deploy", // Endpoint corrigé selon infrastructure
   WEBHOOK_TOKEN:
     "2bce1774a17bf4a01b21798780481413a9872b27c457b7c778e7c157125a6410",
-  BUILD_COMMAND: "npm run build:landing", // ✅ Correction 1: commande spécifique
-  BUILD_DIR: "dist/landing", // ✅ Correction 2: répertoire correct
-  TIMEOUT: 300000,
+  BUILD_DIR: "./dist/landing",
+  TARGET_PATH: "/var/www/melyia/dev", // Chemin pour landing page
 };
 
-// Couleurs console
-const colors = {
-  green: "\x1b[32m",
-  red: "\x1b[31m",
-  yellow: "\x1b[33m",
-  blue: "\x1b[34m",
-  cyan: "\x1b[36m",
-  reset: "\x1b[0m",
-};
-
-function log(message, color = "reset") {
-  console.log(`${colors[color]}${message}${colors.reset}`);
+/**
+ * Utilitaire de logging coloré
+ */
+function log(message, color = "white") {
+  const colors = {
+    red: "\x1b[31m",
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+    blue: "\x1b[34m",
+    cyan: "\x1b[36m",
+    white: "\x1b[37m",
+    reset: "\x1b[0m",
+  };
+  console.log(`${colors[color] || colors.white}${message}${colors.reset}`);
 }
 
 /**
- * 1. Build du projet Vite en mode landing
+ * Build du projet avant déploiement
  */
 async function buildProject() {
-  log("🏗️  Démarrage du build Vite Landing...", "blue");
-
   try {
-    // Nettoyer l'ancien build
-    if (await fs.pathExists(CONFIG.BUILD_DIR)) {
-      await fs.remove(CONFIG.BUILD_DIR);
-      log(`🧹 Ancien build supprimé: ${CONFIG.BUILD_DIR}`, "yellow");
-    }
+    log("🔨 Build Vite Landing...", "blue");
 
-    // Lancer le build spécifique landing
-    log(`⚙️  Commande: ${CONFIG.BUILD_COMMAND}`, "blue");
-    execSync(CONFIG.BUILD_COMMAND, {
-      stdio: "inherit",
-      timeout: CONFIG.TIMEOUT,
+    const { spawn } = await import("child_process");
+
+    return new Promise((resolve, reject) => {
+      const buildProcess = spawn("npm", ["run", "build:landing"], {
+        stdio: "pipe",
+        shell: true,
+      });
+
+      let output = "";
+      buildProcess.stdout.on("data", (data) => {
+        output += data.toString();
+        process.stdout.write(data);
+      });
+
+      buildProcess.stderr.on("data", (data) => {
+        output += data.toString();
+        process.stderr.write(data);
+      });
+
+      buildProcess.on("close", (code) => {
+        if (code === 0) {
+          log("✅ Build réussi !", "green");
+          resolve(true);
+        } else {
+          log(`❌ Build échoué avec le code ${code}`, "red");
+          reject(new Error(`Build failed with code ${code}`));
+        }
+      });
     });
-
-    // Vérifier le résultat
-    if (!(await fs.pathExists(CONFIG.BUILD_DIR))) {
-      throw new Error(`Dossier build non trouvé: ${CONFIG.BUILD_DIR}`);
-    }
-
-    // Vérifier index.html
-    const indexPath = path.join(CONFIG.BUILD_DIR, "index.html");
-    if (!(await fs.pathExists(indexPath))) {
-      throw new Error("index.html non trouvé dans le build");
-    }
-
-    // ✅ Correction 3: Vérifier que le bouton "Se connecter" est présent
-    const indexContent = await fs.readFile(indexPath, "utf8");
-    if (
-      indexContent.includes("Se connecter") ||
-      indexContent.includes("connecter")
-    ) {
-      log("✅ Bouton 'Se connecter' détecté dans le build", "green");
-    } else {
-      log(
-        "⚠️  ATTENTION: Bouton 'Se connecter' non trouvé dans le build",
-        "yellow"
-      );
-    }
-
-    log("✅ Build Vite Landing terminé avec succès !", "green");
-    return true;
   } catch (error) {
     log(`❌ Erreur build: ${error.message}`, "red");
     return false;
@@ -89,100 +80,89 @@ async function buildProject() {
 }
 
 /**
- * 2. Collecte récursive des fichiers
+ * Collecte récursive des fichiers à déployer
  */
 async function collectFiles() {
-  log("📁 Collecte des fichiers buildés...", "blue");
+  const files = [];
 
-  try {
-    const files = [];
+  function scanDirectory(dirPath, relativePath = "") {
+    const items = fs.readdirSync(dirPath);
 
-    // Fonction récursive pour parcourir le dossier
-    async function scanDirectory(dir, relativePath = "") {
-      const items = await fs.readdir(dir);
+    for (const item of items) {
+      const fullPath = path.join(dirPath, item);
+      const itemRelativePath = path
+        .join(relativePath, item)
+        .replace(/\\/g, "/");
 
-      for (const item of items) {
-        const fullPath = path.join(dir, item);
-        const itemRelativePath = path.join(relativePath, item);
-        const stats = await fs.stat(fullPath);
-
-        if (stats.isDirectory()) {
-          // Dossier : récursion
-          await scanDirectory(fullPath, itemRelativePath);
-        } else {
-          // Fichier : ajouter à la liste
-          const content = await fs.readFile(fullPath);
-          const normalizedPath = itemRelativePath.replace(/\\/g, "/"); // Unix path
-
-          files.push({
-            name: normalizedPath,
-            content: content,
-            size: stats.size,
-          });
-        }
+      if (fs.statSync(fullPath).isDirectory()) {
+        scanDirectory(fullPath, itemRelativePath);
+      } else {
+        files.push({
+          path: fullPath,
+          relativePath: itemRelativePath,
+          name: item,
+          size: fs.statSync(fullPath).size,
+        });
       }
     }
-
-    await scanDirectory(CONFIG.BUILD_DIR);
-
-    log(`📦 ${files.length} fichiers collectés`, "green");
-
-    // Afficher la liste des fichiers
-    files.forEach((file) => {
-      const sizeKB = (file.size / 1024).toFixed(1);
-      log(`   - ${file.name} (${sizeKB} KB)`, "cyan");
-    });
-
-    return files;
-  } catch (error) {
-    log(`❌ Erreur collecte: ${error.message}`, "red");
-    return null;
   }
+
+  if (!fs.existsSync(CONFIG.BUILD_DIR)) {
+    throw new Error(`Répertoire build introuvable: ${CONFIG.BUILD_DIR}`);
+  }
+
+  scanDirectory(CONFIG.BUILD_DIR);
+  return files;
 }
 
 /**
- * 3. Envoi au webhook dev.melyia.com
+ * Déploiement vers le serveur
  */
 async function deployToServer(files) {
-  log("🚀 Déploiement vers dev.melyia.com...", "blue");
-
   try {
-    // Créer FormData
+    log(`📤 Upload vers ${CONFIG.SERVER_URL}...`, "blue");
+
     const form = new FormData();
 
-    // Ajouter tous les fichiers
-    files.forEach((file) => {
-      form.append("files", file.content, {
-        filename: file.name,
+    // Métadonnées du déploiement
+    form.append(
+      "metadata",
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        files_count: files.length,
+        total_size: files.reduce((sum, f) => sum + f.size, 0),
+        source: "cursor-local",
+        target: CONFIG.TARGET_PATH,
+        version: "20.1.0",
+        type: "landing",
+      })
+    );
+
+    // Ajout de tous les fichiers
+    for (const file of files) {
+      form.append("files", fs.createReadStream(file.path), {
+        filename: file.relativePath,
         contentType: getMimeType(file.name),
       });
-    });
-
-    // ✅ Correction 4: Header webhook corrigé
-    log(`📡 Envoi de ${files.length} fichiers...`, "blue");
-    const response = await fetch(CONFIG.WEBHOOK_URL, {
-      method: "POST",
-      headers: {
-        "X-Webhook-Token": CONFIG.WEBHOOK_TOKEN, // Correction header
-        ...form.getHeaders(),
-      },
-      body: form,
-      timeout: CONFIG.TIMEOUT,
-    });
-
-    // ✅ Correction 5: Gérer réponse texte et JSON
-    let result;
-    const contentType = response.headers.get("content-type");
-
-    if (contentType && contentType.includes("application/json")) {
-      result = await response.json();
-    } else {
-      const textResult = await response.text();
-      result = { message: textResult };
     }
 
+    // Requête de déploiement
+    const response = await fetch(
+      `${CONFIG.SERVER_URL}${CONFIG.WEBHOOK_ENDPOINT}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${CONFIG.WEBHOOK_TOKEN}`,
+          ...form.getHeaders(),
+        },
+        body: form,
+      }
+    );
+
+    const result = await response.json();
+
     if (response.ok) {
-      log("✅ Déploiement réussi !", "green");
+      log(`✅ Déploiement réussi !`, "green");
       log(`📊 Détails:`, "blue");
       log(`   - Status: ${response.status}`, "yellow");
       log(`   - Fichiers déployés: ${files.length}`, "yellow");
@@ -247,7 +227,8 @@ function getMimeType(filename) {
  * 🚀 FONCTION PRINCIPALE
  */
 async function main() {
-  log("\n🚀 === DÉPLOIEMENT CURSOR → DEV.MELYIA.COM ===\n", "blue");
+  log("\n🚀 === DÉPLOIEMENT CURSOR → DEV.MELYIA.COM v20.1 ===\n", "blue");
+  log("🔧 Configuration corrigée pour landing page", "cyan");
 
   const startTime = Date.now();
 
@@ -264,6 +245,9 @@ async function main() {
       log("❌ Aucun fichier à déployer", "red");
       process.exit(1);
     }
+
+    log(`📁 Fichiers à déployer depuis ${CONFIG.BUILD_DIR}/`, "blue");
+    files.forEach((f) => log(`   - ${f.relativePath}`, "white"));
 
     // 3. Déploiement
     const deploySuccess = await deployToServer(files);
