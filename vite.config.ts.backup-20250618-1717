@@ -25,10 +25,7 @@ export default defineConfig(async ({ mode }) => {
         : path.resolve(__dirname, "dist/landing"),
       emptyOutDir: true,
       rollupOptions: {
-        // ✅ CORRECTION : Points d'entrée séparés selon le mode
-        input: isApp
-          ? path.resolve(__dirname, "client", "index-app.html")
-          : path.resolve(__dirname, "client", "index.html"),
+        input: path.resolve(__dirname, "client", "index.html"),
       },
     },
     server: {
@@ -42,7 +39,6 @@ export default defineConfig(async ({ mode }) => {
           { from: /^\/register/, to: "/index.html" },
           { from: /^\/dentist/, to: "/index.html" },
           { from: /^\/patient/, to: "/index.html" },
-          { from: /^\/admin/, to: "/index.html" },
           { from: /^\/unauthorized/, to: "/index.html" },
         ],
       },

@@ -1,12 +1,23 @@
-<!DOCTYPE html>
-<html>
+﻿<!DOCTYPE html>
+<html lang="fr">
   <head>
-    <title>Melyia - Assistant IA Dentaire</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Melyia - Assistant IA Dentaire</title>
+    
+    <!-- Meta description -->
+    <meta name="description" content="Application d'authentification Melyia - Plateforme IA pour cabinets dentaires" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    
+    <!-- Preconnect pour optimisation -->
+    <link rel="preconnect" href="https://app-dev.melyia.com" />
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/landing/main.tsx"></script>
+    
+    <!-- Point d'entrée APPLICATION avec authentification -->
+    <script type="module" src="/src/app/main.tsx"></script>
   </body>
 </html>

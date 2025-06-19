@@ -12,11 +12,12 @@ import Register from "./pages/auth/register";
 // Dashboards par rôle
 import DentistDashboard from "./pages/dentist/dashboard";
 import PatientDashboard from "./pages/patient/dashboard";
+import AdminDashboard from "./pages/admin/dashboard";
 
 // Composant pour protéger les routes authentifiées
 const ProtectedRoute: React.FC<{
   children: React.ReactNode;
-  allowedRoles?: ("dentist" | "patient")[];
+  allowedRoles?: ("dentist" | "patient" | "admin")[];
 }> = ({ children, allowedRoles }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
 
@@ -59,7 +60,9 @@ const RoleBasedRedirect: React.FC = () => {
   }
 
   // Redirection selon le rôle
-  if (user?.role === "dentist") {
+  if (user?.role === "admin") {
+    return <Redirect to="/admin/dashboard" />;
+  } else if (user?.role === "dentist") {
     return <Redirect to="/dentist/dashboard" />;
   } else if (user?.role === "patient") {
     return <Redirect to="/patient/dashboard" />;
@@ -80,10 +83,31 @@ const NotFoundPage: React.FC = () => (
         La page que vous cherchez n'existe pas.
       </p>
       <button
-        onClick={() => (window.location.href = "/")}
-        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
+        onClick={() => window.history.back()}
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
       >
-        Retour à l'accueil
+        Retour
+      </button>
+    </div>
+  </div>
+);
+
+// Page d'accès non autorisé
+const UnauthorizedPage: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="text-center">
+      <h1 className="text-6xl font-bold text-red-300 mb-4">403</h1>
+      <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+        Accès non autorisé
+      </h2>
+      <p className="text-gray-600 mb-6">
+        Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+      </p>
+      <button
+        onClick={() => window.history.back()}
+        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
+      >
+        Retour
       </button>
     </div>
   </div>
@@ -94,46 +118,36 @@ const AppRoutes: React.FC = () => {
   return (
     <Router>
       <Switch>
-        {/* Route racine - redirection selon rôle */}
-        <Route path="/" component={RoleBasedRedirect} />
-
-        {/* Routes d'authentification (publiques) */}
+        {/* Routes publiques */}
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={Register} />
 
-        {/* Routes protégées - Dentistes */}
+        {/* Routes admin protégées */}
+        <Route path="/admin/dashboard">
+          <ProtectedRoute allowedRoles={["admin"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        </Route>
+
+        {/* Routes dentiste protégées */}
         <Route path="/dentist/dashboard">
           <ProtectedRoute allowedRoles={["dentist"]}>
             <DentistDashboard />
           </ProtectedRoute>
         </Route>
 
-        {/* Routes protégées - Patients */}
+        {/* Routes patient protégées */}
         <Route path="/patient/dashboard">
           <ProtectedRoute allowedRoles={["patient"]}>
             <PatientDashboard />
           </ProtectedRoute>
         </Route>
 
-        {/* Page d'erreur non autorisé */}
-        <Route path="/unauthorized">
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="text-center">
-              <h1 className="text-2xl font-bold text-red-600 mb-4">
-                Accès non autorisé
-              </h1>
-              <p className="text-gray-600 mb-4">
-                Vous n'avez pas les permissions pour accéder à cette page.
-              </p>
-              <button
-                onClick={() => (window.location.href = "/")}
-                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-              >
-                Retour à l'accueil
-              </button>
-            </div>
-          </div>
-        </Route>
+        {/* Page d'accès non autorisé */}
+        <Route path="/unauthorized" component={UnauthorizedPage} />
+
+        {/* Route racine avec redirection selon rôle */}
+        <Route path="/" component={RoleBasedRedirect} />
 
         {/* Page 404 pour toutes les autres routes */}
         <Route component={NotFoundPage} />

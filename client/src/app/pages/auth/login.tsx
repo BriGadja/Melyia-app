@@ -33,8 +33,18 @@ const LoginPage: React.FC = () => {
   // Redirection si déjà connecté
   React.useEffect(() => {
     if (isAuthenticated && user) {
-      const redirectPath =
-        user.role === "dentist" ? "/dentist/dashboard" : "/patient/dashboard";
+      const redirectPath = (() => {
+        switch (user.role) {
+          case "admin":
+            return "/admin/dashboard";
+          case "dentist":
+            return "/dentist/dashboard";
+          case "patient":
+            return "/patient/dashboard";
+          default:
+            return "/patient/dashboard";
+        }
+      })();
       console.log("🔄 Redirection vers:", redirectPath);
       setLocation(redirectPath);
     }

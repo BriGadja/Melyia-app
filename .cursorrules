@@ -233,7 +233,17 @@ const { data: conversations, isLoading } = useQuery({
 });
 
 // Context pour état global
-const { user, isAuthenticated } = useAuth();
+const { user, isAuthenticated, isAdmin, hasPermission } = useAuth();
+
+// Vérifier si l'utilisateur est admin
+if (isAdmin) {
+  // ...
+}
+
+// Vérifier une permission spécifique
+if (hasPermission('manage_users')) {
+  // ...
+}
 ```
 
 ## PRIORITÉS DÉVELOPPEMENT v17 (ÉTAT FINAL - 14/06/2025)

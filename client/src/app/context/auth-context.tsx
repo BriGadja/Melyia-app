@@ -1,13 +1,22 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-// Types pour l'authentification
+// Types pour l'authentification avec support admin
 interface User {
   id: number;
   email: string;
-  role: "dentist" | "patient";
+  role: "dentist" | "patient" | "admin"; // ✅ Ajout du rôle admin
   firstName: string;
   lastName: string;
   practiceInfo?: string; // Pour les dentistes
+  permissions?: AdminPermissions; // Pour les admins
+}
+
+// Types spécifiques aux admins
+interface AdminPermissions {
+  super_admin: boolean;
+  manage_users: boolean;
+  view_analytics: boolean;
+  manage_documents: boolean;
 }
 
 interface AuthState {
@@ -20,10 +29,12 @@ interface AuthState {
 interface AuthContextType extends AuthState {
   login: (
     email: string,
-    password: string,
+    password: string
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   register: (userData: any) => Promise<{ success: boolean; error?: string }>;
+  isAdmin: boolean; // ✅ Helper pour vérifier si l'utilisateur est admin
+  hasPermission: (permission: keyof AdminPermissions) => boolean; // ✅ Vérification permissions
 }
 
 // Création du Context
@@ -41,7 +52,7 @@ export const useAuth = () => {
 // URL de base de l'API auth
 const API_BASE_URL = "https://app-dev.melyia.com/api";
 
-// Provider du Context d'authentification
+// Provider du Context d'authentification étendu
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -110,6 +121,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return { success: false, error: "Inscription non encore implémentée" };
   };
 
+  // ✅ Helper pour vérifier si l'utilisateur est admin
+  const isAdmin = authState.user?.role === "admin";
+
+  // ✅ Fonction pour vérifier les permissions admin
+  const hasPermission = (permission: keyof AdminPermissions): boolean => {
+    if (!isAdmin || !authState.user?.permissions) return false;
+    return authState.user.permissions[permission] === true;
+  };
+
   // Vérification du token au chargement de l'app
   useEffect(() => {
     const checkAuthState = async () => {
@@ -165,6 +185,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     login,
     logout,
     register,
+    isAdmin, // ✅ Nouvelle propriété
+    hasPermission, // ✅ Nouvelle méthode
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
