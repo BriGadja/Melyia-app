@@ -1,0 +1,46 @@
+name: 🚀 Deploy Combined - Landing + App
+
+on:
+  workflow_dispatch: # Déclenchement manuel
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+
+jobs:
+  deploy-combined:
+    name: 🎯 Deploy Landing + App Combined
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.14.0"
+          cache: "npm"
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🚀 Combined Deployment (Landing + App)
+        run: npm run deploy:combined
+        env:
+          VITE_API_URL: https://app-dev.melyia.com/api
+          VITE_API_BASE_URL: https://dev.melyia.com/api
+          NODE_ENV: production
+          VITE_DEV_MODE: false
+
+      - name: 📢 Success Notification
+        if: success()
+        run: |
+          echo "🎉 DÉPLOIEMENT COMBINÉ RÉUSSI !"
+          echo "🌐 Landing Page: https://dev.melyia.com"
+          echo "🔐 Application: https://app-dev.melyia.com"
+          echo "📊 Commit: ${{ github.sha }}" 

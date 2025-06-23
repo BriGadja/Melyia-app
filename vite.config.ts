@@ -1,14 +1,26 @@
 ﻿import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+// import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal"; // Temporairement désactivé
 
 export default defineConfig(async ({ mode }) => {
   const isApp = mode === "app";
   const currentApp = isApp ? "app" : "landing";
 
   return {
-    plugins: [react(), runtimeErrorOverlay()],
+    plugins: [
+      react(),
+      // runtimeErrorOverlay() // Temporairement désactivé
+    ],
+    // ✅ POSTCSS AVEC CONFIG EXPLICITE
+    css: {
+      postcss: {
+        plugins: [
+          require('tailwindcss'),
+          require('autoprefixer'),
+        ],
+      },
+    },
     resolve: {
       alias: {
         "@shared": path.resolve(__dirname, "client", "src", "shared"),
