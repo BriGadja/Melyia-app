@@ -352,6 +352,50 @@ app.post("/api/auth/login", async (req, res) => {
   }
 });
 
+// Route de vérification du token
+app.post("/api/auth/verify", authenticateToken, async (req, res) => {
+  try {
+    // Le middleware authenticateToken a déjà validé le token
+    // Récupérer les infos utilisateur depuis la base
+    const userResult = await pool.query(
+      `SELECT 
+        u.id, u.email, u.first_name, u.last_name, u.role, u.is_active,
+        CASE 
+          WHEN u.role = 'admin' THEN ap.permissions::text
+          ELSE NULL 
+        END as permissions
+      FROM users u
+      LEFT JOIN admin_profiles ap ON u.id = ap.user_id
+      WHERE u.id = $1`,
+      [req.user.userId]
+    );
+
+    if (userResult.rows.length === 0 || !userResult.rows[0].is_active) {
+      return res.status(401).json({
+        success: false,
+        message: "Token invalide ou compte désactivé",
+      });
+    }
+
+    const user = userResult.rows[0];
+
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
+        role: user.role,
+        permissions: user.permissions ? JSON.parse(user.permissions) : null,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Erreur vérification token:", error);
+    res.status(500).json({ success: false, message: "Erreur serveur" });
+  }
+});
+
 // Route register
 app.post("/api/auth/register", async (req, res) => {
   try {

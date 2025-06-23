@@ -98,7 +98,7 @@ const LoginPage: React.FC = () => {
     } else if (type === "admin") {
       setFormData({
         email: "brice@melyia.com",
-        password: "test123",
+        password: "password",
       });
     }
   };

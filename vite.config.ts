@@ -36,6 +36,12 @@ export default defineConfig(async ({ mode }) => {
           "client",
           isApp ? "index-app.html" : "index-landing.html"
         ),
+        output: {
+          // Force new hash generation
+          entryFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+          chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
+          assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
+        },
       },
     },
     server: {

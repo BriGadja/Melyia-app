@@ -1,6 +1,6 @@
 {
   "name": "melyia-app",
-  "version": "20.0.0",
+  "version": "20.1.0",
   "description": "Application SaaS Dentaire avec IA - Landing + Auth + Chatbot",
   "type": "module",
   "license": "MIT",
