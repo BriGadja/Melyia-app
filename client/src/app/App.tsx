@@ -12,7 +12,7 @@ import Register from "./pages/auth/register";
 // Dashboards par rôle
 import DentistDashboard from "./pages/dentist/dashboard";
 import PatientDashboard from "./pages/patient/dashboard";
-import AdminDashboard from "./pages/admin/dashboard";
+import AdminDashboard from "./pages/admin/dashboard"; // Si vous l'avez
 
 // Composant pour protéger les routes authentifiées
 const ProtectedRoute: React.FC<{
@@ -43,7 +43,7 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
-// Composant pour rediriger selon le rôle après login
+// ✅ CORRECTION : Composant pour rediriger selon le rôle SANS forcer /login
 const RoleBasedRedirect: React.FC = () => {
   const { user, isAuthenticated, isLoading } = useAuth();
 
@@ -55,20 +55,22 @@ const RoleBasedRedirect: React.FC = () => {
     );
   }
 
+  // ✅ CHANGEMENT : Si non authentifié, montrer la page de connexion directement
   if (!isAuthenticated) {
-    return <Redirect to="/login" />;
+    return <LoginPage />;
   }
 
-  // Redirection selon le rôle
-  if (user?.role === "admin") {
-    return <Redirect to="/admin/dashboard" />;
-  } else if (user?.role === "dentist") {
-    return <Redirect to="/dentist/dashboard" />;
-  } else if (user?.role === "patient") {
-    return <Redirect to="/patient/dashboard" />;
+  // Redirection selon le rôle pour les utilisateurs authentifiés
+  switch (user?.role) {
+    case "admin":
+      return <Redirect to="/admin/dashboard" />;
+    case "dentist":
+      return <Redirect to="/dentist/dashboard" />;
+    case "patient":
+      return <Redirect to="/patient/dashboard" />;
+    default:
+      return <Redirect to="/login" />;
   }
-
-  return <Redirect to="/login" />;
 };
 
 // Page 404 simplifiée
@@ -83,31 +85,30 @@ const NotFoundPage: React.FC = () => (
         La page que vous cherchez n'existe pas.
       </p>
       <button
-        onClick={() => window.history.back()}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+        onClick={() => (window.location.href = "/")}
+        className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors"
       >
-        Retour
+        Retour à l'accueil
       </button>
     </div>
   </div>
 );
 
-// Page d'accès non autorisé
+// Page d'erreur non autorisé
 const UnauthorizedPage: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center">
     <div className="text-center">
-      <h1 className="text-6xl font-bold text-red-300 mb-4">403</h1>
-      <h2 className="text-2xl font-semibold text-gray-700 mb-4">
+      <h1 className="text-2xl font-bold text-red-600 mb-4">
         Accès non autorisé
-      </h2>
-      <p className="text-gray-600 mb-6">
-        Vous n'avez pas les permissions nécessaires pour accéder à cette page.
+      </h1>
+      <p className="text-gray-600 mb-4">
+        Vous n'avez pas les permissions pour accéder à cette page.
       </p>
       <button
-        onClick={() => window.history.back()}
-        className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md"
+        onClick={() => (window.location.href = "/")}
+        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
       >
-        Retour
+        Retour à l'accueil
       </button>
     </div>
   </div>
@@ -118,36 +119,46 @@ const AppRoutes: React.FC = () => {
   return (
     <Router>
       <Switch>
-        {/* Routes publiques */}
+        {/* ✅ Route racine - affiche LoginPage si non authentifié, sinon redirige selon rôle */}
+        <Route path="/" component={RoleBasedRedirect} />
+
+        {/* Routes d'authentification (publiques) */}
         <Route path="/login" component={LoginPage} />
         <Route path="/register" component={Register} />
 
-        {/* Routes admin protégées */}
+        {/* Routes protégées - Admin */}
         <Route path="/admin/dashboard">
           <ProtectedRoute allowedRoles={["admin"]}>
-            <AdminDashboard />
+            {/* Remplacez par votre composant AdminDashboard quand il sera créé */}
+            <div className="min-h-screen flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-3xl font-bold text-blue-600 mb-4">
+                  🎯 Dashboard Admin
+                </h1>
+                <p className="text-gray-600">
+                  Interface d'administration Melyia
+                </p>
+              </div>
+            </div>
           </ProtectedRoute>
         </Route>
 
-        {/* Routes dentiste protégées */}
+        {/* Routes protégées - Dentistes */}
         <Route path="/dentist/dashboard">
           <ProtectedRoute allowedRoles={["dentist"]}>
             <DentistDashboard />
           </ProtectedRoute>
         </Route>
 
-        {/* Routes patient protégées */}
+        {/* Routes protégées - Patients */}
         <Route path="/patient/dashboard">
           <ProtectedRoute allowedRoles={["patient"]}>
             <PatientDashboard />
           </ProtectedRoute>
         </Route>
 
-        {/* Page d'accès non autorisé */}
+        {/* Page d'erreur non autorisé */}
         <Route path="/unauthorized" component={UnauthorizedPage} />
-
-        {/* Route racine avec redirection selon rôle */}
-        <Route path="/" component={RoleBasedRedirect} />
 
         {/* Page 404 pour toutes les autres routes */}
         <Route component={NotFoundPage} />

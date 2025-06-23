@@ -17,8 +17,9 @@ const CONFIG = {
   WEBHOOK_ENDPOINT: "/hooks/deploy", // Endpoint corrigé selon infrastructure
   WEBHOOK_TOKEN:
     "2bce1774a17bf4a01b21798780481413a9872b27c457b7c778e7c157125a6410",
+  BUILD_COMMAND: "npm run build:landing",
   BUILD_DIR: "./dist/landing",
-  TARGET_PATH: "/var/www/melyia/dev", // Chemin pour landing page
+  TARGET_PATH: "/var/www/melyia/dev/frontend", // Chemin pour landing page
 };
 
 /**
@@ -269,7 +270,9 @@ async function main() {
   }
 }
 
-// Lancement du script
-if (import.meta.url === `file://${process.argv[1]}`) {
-  main();
-}
+// ✅ AUTO-EXÉCUTION GARANTIE (style v23.0.0-PERENNE)
+console.log("🔄 Démarrage script de déploiement landing...");
+main().catch((error) => {
+  console.error("❌ Erreur fatale:", error);
+  process.exit(1);
+});
