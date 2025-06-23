@@ -49,8 +49,10 @@ export const useAuth = () => {
   return context;
 };
 
-// URL de base de l'API auth
-const API_BASE_URL = "https://app-dev.melyia.com/api";
+// URL de base de l'API auth - utilise le proxy Vite en dev
+const API_BASE_URL = import.meta.env.DEV
+  ? "/api"
+  : "https://app-dev.melyia.com/api";
 
 // Provider du Context d'authentification étendu
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({

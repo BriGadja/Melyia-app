@@ -1,24 +1,18 @@
 ﻿import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-// import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal"; // Temporairement désactivé
+import tailwindcss from "tailwindcss";
+import autoprefixer from "autoprefixer";
 
 export default defineConfig(async ({ mode }) => {
   const isApp = mode === "app";
   const currentApp = isApp ? "app" : "landing";
 
   return {
-    plugins: [
-      react(),
-      // runtimeErrorOverlay() // Temporairement désactivé
-    ],
-    // ✅ POSTCSS AVEC CONFIG EXPLICITE
+    plugins: [react()],
     css: {
       postcss: {
-        plugins: [
-          require('tailwindcss'),
-          require('autoprefixer'),
-        ],
+        plugins: [tailwindcss, autoprefixer],
       },
     },
     resolve: {
@@ -37,13 +31,40 @@ export default defineConfig(async ({ mode }) => {
         : path.resolve(__dirname, "dist/landing"),
       emptyOutDir: true,
       rollupOptions: {
-        // ✅ CORRECTION : Points d'entrée séparés selon le mode
-        input: isApp
-          ? path.resolve(__dirname, "client", "index-app.html")
-          : path.resolve(__dirname, "client", "index.html"),
+        input: path.resolve(
+          __dirname,
+          "client",
+          isApp ? "index-app.html" : "index-landing.html"
+        ),
       },
     },
     server: {
+      port: 5173,
+      host: true,
+      proxy: {
+        "/api": {
+          target: "https://app-dev.melyia.com",
+          changeOrigin: true,
+          secure: true,
+          configure: (proxy, _options) => {
+            proxy.on("error", (err, _req, _res) => {
+              console.log("🔴 Erreur proxy:", err.message);
+            });
+            proxy.on("proxyReq", (proxyReq, req, _res) => {
+              console.log(
+                "🚀 Proxy API:",
+                req.method,
+                req.url,
+                "→",
+                proxyReq.path
+              );
+            });
+            proxy.on("proxyRes", (proxyRes, req, _res) => {
+              console.log("✅ Réponse:", req.url, "→", proxyRes.statusCode);
+            });
+          },
+        },
+      },
       fs: {
         strict: true,
         deny: ["**/.*"],
@@ -54,7 +75,6 @@ export default defineConfig(async ({ mode }) => {
           { from: /^\/register/, to: "/index.html" },
           { from: /^\/dentist/, to: "/index.html" },
           { from: /^\/patient/, to: "/index.html" },
-          { from: /^\/admin/, to: "/index.html" },
           { from: /^\/unauthorized/, to: "/index.html" },
         ],
       },

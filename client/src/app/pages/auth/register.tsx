@@ -23,8 +23,9 @@ import {
 } from "lucide-react";
 import { LoadingSpinner } from "@shared/components/ui/loading-spinner";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://app-dev.melyia.com/api";
+const API_BASE_URL = import.meta.env.DEV
+  ? "/api"
+  : "https://app-dev.melyia.com/api";
 console.log("🔗 API URL utilisée:", API_BASE_URL); // Debug
 
 export default function Register() {

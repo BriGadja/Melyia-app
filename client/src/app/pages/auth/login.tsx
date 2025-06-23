@@ -84,15 +84,20 @@ const LoginPage: React.FC = () => {
   };
 
   // Fonction pour remplir rapidement les comptes test
-  const fillTestAccount = (type: "dentist" | "patient") => {
+  const fillTestAccount = (type: "dentist" | "patient" | "admin") => {
     if (type === "dentist") {
       setFormData({
         email: "dentiste@melyia.com",
         password: "test123",
       });
-    } else {
+    } else if (type === "patient") {
       setFormData({
         email: "patient@melyia.com",
+        password: "test123",
+      });
+    } else if (type === "admin") {
+      setFormData({
+        email: "brice@melyia.com",
         password: "test123",
       });
     }
@@ -124,7 +129,7 @@ const LoginPage: React.FC = () => {
             <p className="text-sm text-blue-800 font-medium">
               Comptes de test :
             </p>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 type="button"
                 variant="outline"
@@ -146,6 +151,16 @@ const LoginPage: React.FC = () => {
                 👤 Marie Martin
               </Button>
             </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fillTestAccount("admin")}
+              className="w-full"
+              disabled={isLoading}
+            >
+              🔧 Admin - Brice
+            </Button>
           </div>
 
           {/* Formulaire de connexion */}

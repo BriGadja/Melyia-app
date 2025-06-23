@@ -1,57 +1,60 @@
-# Mettre à jour le .gitignore pour exclure les fichiers sensibles
-@'
-# Dependencies
+# =============================================================================
+# .GITIGNORE MELYIA - PROJET FULL-STACK
+# =============================================================================
+
+# Frontend
 node_modules/
-*/node_modules/
-
-# Production builds
 dist/
-build/
-*/dist/
-*/build/
-
-# Environment files (SENSIBLES - NE PAS COMMITER)
-.env
 .env.local
-.env.production
-.env.development
-*/.env
-*/.env.local
-
-# Logs et audits
-logs/
+.vite/
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-frontend-audit-*.log
-audit-*.log
 
-# Fichiers temporaires et outils
-.replit
-tmp/
-temp/
+# Backend synchronisé (lecture seule)
+server/backend/.env           # Pas les vrais secrets serveur
+server/logs/*.log            # Logs récents (se régénèrent)
 
-# IDE files
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# Configurations serveur (garder pour Cursor)
+# server/configs/              # ✅ GARDER - Cursor en a besoin
 
-# OS generated files
+# Documentation (garder)
+# docs/                        # ✅ GARDER - Architecture
+
+# OS et éditeurs
 .DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
 Thumbs.db
+.vscode/settings.json        # Paramètres perso uniquement
+.idea/
 
-# Cache
+# Temporaires
+*.tmp
+*.temp
+sync-*.log
+
+# Secrets (important !)
+*.key
+*.pem
+.env                         # Env de prod
+*.secret
+
+# Builds et cache
 .cache/
-.parcel-cache/
+coverage/
+.nyc_output/
 
-# Documentation auto-generated
-docs/.vuepress/dist
-'@ | Out-File -FilePath ".gitignore" -Encoding UTF8 -Force
+# =============================================================================
+# RÈGLES SPÉCIALES PROJET UNIFIÉ
+# =============================================================================
+
+# ✅ GARDER pour que Cursor comprenne l'architecture :
+# server/configs/nginx/*.conf
+# server/configs/pm2/*.js  
+# server/configs/postgresql/*.sql
+# server/backend/server.js
+# server/backend/package.json
+# docs/architecture/
+
+# ❌ EXCLURE (sensible ou temporaire) :
+server/backend/.env
+server/logs/
+*.private
+auth-keys/

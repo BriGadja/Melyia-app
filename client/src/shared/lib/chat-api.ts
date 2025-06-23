@@ -25,7 +25,10 @@ export class ChatAPI {
     console.log("Envoi message avec patientId:", user.id);
 
     try {
-      const response = await fetch("https://app-dev.melyia.com/api/chat", {
+      const apiUrl = import.meta.env.DEV
+        ? "/api/chat"
+        : "https://app-dev.melyia.com/api/chat";
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

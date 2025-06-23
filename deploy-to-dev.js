@@ -91,17 +91,23 @@ async function collectFiles() {
 
     for (const item of items) {
       const fullPath = path.join(dirPath, item);
-      const itemRelativePath = path
-        .join(relativePath, item)
-        .replace(/\\/g, "/");
+      let itemRelativePath = path.join(relativePath, item).replace(/\\/g, "/");
 
       if (fs.statSync(fullPath).isDirectory()) {
         scanDirectory(fullPath, itemRelativePath);
       } else {
+        // ✅ CORRECTION : Renommer index-landing.html en index.html pour nginx
+        if (item === "index-landing.html") {
+          itemRelativePath = path
+            .join(relativePath, "index.html")
+            .replace(/\\/g, "/");
+          log(`🔄 Renommage: ${item} → index.html`, "yellow");
+        }
+
         files.push({
           path: fullPath,
           relativePath: itemRelativePath,
-          name: item,
+          name: item === "index-landing.html" ? "index.html" : item,
           size: fs.statSync(fullPath).size,
         });
       }

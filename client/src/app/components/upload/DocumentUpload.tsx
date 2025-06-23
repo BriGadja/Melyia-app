@@ -54,9 +54,9 @@ export const DocumentUpload = ({ onUploadComplete }: DocumentUploadProps) => {
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
 
-  // Configuration d'axios avec le token
+  // Configuration d'axios avec le token - utilise le proxy Vite en dev
   const api = axios.create({
-    baseURL: "https://app-dev.melyia.com/api",
+    baseURL: import.meta.env.DEV ? "/api" : "https://app-dev.melyia.com/api",
     headers: {
       Authorization: `Bearer ${token}`,
     },

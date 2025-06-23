@@ -74,8 +74,10 @@ const AdminDashboard: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>("");
 
-  // Configuration API
-  const API_BASE_URL = "https://app-dev.melyia.com/api";
+  // Configuration API - utilise le proxy Vite en dev
+  const API_BASE_URL = import.meta.env.DEV
+    ? "/api"
+    : "https://app-dev.melyia.com/api";
   const token = localStorage.getItem("auth_token");
 
   // Fonction pour faire des requêtes API authentifiées

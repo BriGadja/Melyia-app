@@ -1,2 +1,0 @@
-﻿// Redirection vers le toaster principal
-export { Toaster } from "../../shared/components/ui/toaster";
