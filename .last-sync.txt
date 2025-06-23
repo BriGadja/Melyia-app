@@ -1,0 +1,30 @@
+﻿SYNCHRONISATION MELYIA
+========================
+Date: 2025-06-23 08:59:29
+Machine: DESKTOP-6CHKA73 (PC Fixe)
+Utilisateur: pc
+SSH Key: melyia_main
+Type: commit
+Branche: main
+Message: Test setup multi-machines
+
+Etat avant sync:
+f1e677f Test setup multi-machines 4ab13e6 Initial commit - Melyia multi-machines setup bc071ee ­ƒÜÇ Deploy v22.1 - Dashboard admin finalis├®
+
+Prochaines etapes sur autre machine:
+1. git pull origin main
+2. .\dev\start-dev.ps1
+
+Configuration SSH pour autre machine:
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255
+
+Fichiers synchronises:
+ M client/index-landing-temp.html
+ M client/index.html
+ D setup-git-melyia-FIXED.ps1
+ D setup-git-melyia.ps1
+ D vite.config.ts.backup-20250618-1717
+?? dev/
+?? setup/
+?? status.ps1
+
