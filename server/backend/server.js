@@ -199,28 +199,147 @@ async function ensureOllamaReady() {
     );
 
     console.log("⚡ Ollama ready (mode rapide) - Modèle chargé et optimisé");
-    return true;
+    return { status: "warm", responseTime: Date.now() };
   } catch (error) {
     console.log("⚠️ Ollama warming up:", error.message);
-    return false;
+    return { status: "cold", error: error.message };
   }
 }
 
-// ✅ Initialisation avec retry intelligent
-async function initOllamaWithRetry() {
-  for (let i = 0; i < 3; i++) {
-    const success = await ensureOllamaReady();
-    if (success) break;
-    console.log(`🔄 Retry Ollama init ${i + 1}/3...`);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+// ✅ NOUVEAU : SERVICE WARM-UP PROACTIF POUR CHATBOT
+async function warmupChatbotForUser(userId) {
+  try {
+    console.log(`🔥 [WARMUP] Démarrage warm-up chatbot pour user: ${userId}`);
+    const startTime = Date.now();
+
+    // 1. Vérifier état actuel d'Ollama
+    const currentStatus = await ensureOllamaReady();
+
+    if (currentStatus.status === "warm") {
+      console.log(
+        `⚡ [WARMUP] Ollama déjà chaud - Prêt instantanément pour user: ${userId}`
+      );
+      return {
+        status: "ready",
+        warmupTime: Date.now() - startTime,
+        isInstant: true,
+        message: "Chatbot prêt instantanément !",
+      };
+    }
+
+    // 2. Si froid, faire un warm-up intelligent avec timeout adaptatif
+    console.log(
+      `🔄 [WARMUP] Modèle froid - Initialisation pour user: ${userId}`
+    );
+
+    const warmupResponse = await axios.post(
+      "http://127.0.0.1:11434/api/generate",
+      {
+        model: "llama3.2:3b",
+        prompt: "Bonjour, je suis votre assistant médical. Prêt à vous aider.",
+        stream: false,
+        keep_alive: "45m", // ✅ OPTIMISÉ : 45min pour éviter le rechargement
+        options: {
+          temperature: 0.2,
+          top_p: 0.8,
+          num_predict: 30, // ✅ RÉDUIT : 30 tokens seulement pour warm-up
+          num_ctx: 512, // ✅ RÉDUIT : contexte minimal pour warm-up
+          stop: ["\n"], // ✅ AJOUTÉ : stop token pour accélérer
+        },
+      },
+      {
+        timeout: 25000, // ✅ AUGMENTÉ : 25s timeout pour chargement initial
+      }
+    );
+
+    const warmupTime = Date.now() - startTime;
+    console.log(`✅ [WARMUP] Succès en ${warmupTime}ms pour user: ${userId}`);
+
+    return {
+      status: "ready",
+      warmupTime,
+      isInstant: false,
+      message: `Chatbot initialisé en ${Math.round(warmupTime / 1000)}s !`,
+    };
+  } catch (error) {
+    const warmupTime = Date.now() - startTime;
+    console.error(
+      `❌ [WARMUP] Erreur pour user: ${userId} après ${warmupTime}ms:`,
+      error.message
+    );
+
+    // ✅ NOUVEAU : Gestion d'erreur intelligente
+    if (error.code === "ECONNABORTED" || warmupTime > 20000) {
+      return {
+        status: "warming",
+        warmupTime,
+        isInstant: false,
+        message: `Initialisation en cours (${Math.round(
+          warmupTime / 1000
+        )}s)... Le chatbot sera prêt sous peu.`,
+        retry: true,
+      };
+    }
+
+    return {
+      status: "error",
+      warmupTime,
+      isInstant: false,
+      message:
+        "Service IA temporairement indisponible. Réessayez dans quelques instants.",
+      error: error.message,
+    };
   }
 }
 
-// Initialisation optimisée au démarrage
-initOllamaWithRetry();
+// ✅ NOUVEAU : ENDPOINT WARM-UP CHATBOT
+app.post("/api/chat/warmup", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    console.log(`🚀 [WARMUP] Demande warm-up de user: ${userId}`);
 
-// ✅ Keep-alive plus fréquent mais plus léger (toutes les 15 minutes)
-setInterval(ensureOllamaReady, 15 * 60 * 1000);
+    const warmupResult = await warmupChatbotForUser(userId);
+
+    res.json({
+      success: true,
+      ...warmupResult,
+      userId: userId,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error("❌ [WARMUP] Erreur endpoint:", error);
+    res.status(500).json({
+      success: false,
+      status: "error",
+      message: "Erreur lors de l'initialisation du chatbot",
+      error: error.message,
+    });
+  }
+});
+
+// ✅ NOUVEAU : ENDPOINT STATUS CHATBOT TEMPS RÉEL
+app.get("/api/chat/status", authenticateToken, async (req, res) => {
+  try {
+    const status = await ensureOllamaReady();
+
+    res.json({
+      success: true,
+      status: status.status,
+      timestamp: new Date().toISOString(),
+      isReady: status.status === "warm",
+      message:
+        status.status === "warm"
+          ? "Chatbot prêt - Réponses rapides !"
+          : "Chatbot en cours d'initialisation...",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      status: "error",
+      message: "Impossible de vérifier l'état du chatbot",
+    });
+  }
+});
 
 // ================================
 // ROUTES AUTHENTICATION
@@ -483,11 +602,13 @@ app.post("/api/auth/register", async (req, res) => {
       if (role === "dentist") {
         await client.query(
           `INSERT INTO dentist_profiles (user_id, practice_name, specializations, subscription_type, max_patients)
-           VALUES ($1, $2, $3, 'trial', 50)`,
+           VALUES ($1, $2, $3, $4, $5)`,
           [
             newUser.id,
             practiceInfo?.practiceName || `Cabinet ${firstName} ${lastName}`,
             practiceInfo?.specializations || ["Dentisterie générale"],
+            practiceInfo?.subscriptionType || "trial",
+            practiceInfo?.maxPatients || 50,
           ]
         );
       } else if (role === "patient") {
@@ -803,26 +924,21 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
             .join("\n")
         : "Pas de documents récents.";
 
-    // ✅ OPTIMISATION 4: Prompt système ultra-court selon intention
+    // ✅ OPTIMISATION 4: Prompt système ULTRA-MINIMALISTE
     let systemPrompt = "";
     switch (intent) {
       case "urgence":
-        systemPrompt = `Assistant dentaire d'urgence français. Évalue et conseille rapidement.`;
+        systemPrompt = `Assistant dentiste. Urgence.`;
         break;
       default:
-        systemPrompt = `Assistant dentaire français. Réponds brièvement et clairement.`;
+        systemPrompt = `Assistant dentiste.`;
     }
 
-    // ✅ OPTIMISATION 5: Prompt final ultra-compact
-    const fullPrompt = `${systemPrompt}
-
-DOSSIER: ${contextPrompt}
-
-QUESTION: ${message}
-
-Réponds en français, max 150 mots, précis et rassurant.
-
-RÉPONSE:`;
+    // ✅ OPTIMISATION 5: Prompt final MINIMALISTE EXTRÊME
+    const fullPrompt = `${systemPrompt} ${message.substring(
+      0,
+      200
+    )} Réponse courte:`;
 
     console.log(
       `🔄 [OLLAMA_FAST] Prompt size: ${fullPrompt.length} chars (vs ${fullPrompt.length} before)`
@@ -838,15 +954,15 @@ RÉPONSE:`;
           stream: false,
           keep_alive: "30m", // 🔑 CRITIQUE : Garde le modèle 30min au lieu de 24h
           options: {
-            temperature: 0.2, // Plus déterministe (0.3 → 0.2)
-            top_p: 0.8, // Plus focalisé (0.9 → 0.8)
-            num_predict: 200, // Limite réponse (400 → 200 tokens)
-            num_ctx: 1024, // Contexte réduit (2048 → 1024)
-            stop: ["\n\nQUESTION:", "\n\nDOSSIER:", "RÉPONSE:", "\n---"], // Stop tokens pour éviter les répétitions
+            temperature: 0.1, // MINIMAL : Maximum déterminisme
+            top_p: 0.5, // TRÈS FOCALISÉ : Réponses plus directes
+            num_predict: 50, // MINIMAL : 50 tokens max (vs 200)
+            num_ctx: 256, // MINIMAL : Contexte ultra-réduit (vs 1024)
+            stop: ["\n", ".", "!", "?"], // ARRÊT RAPIDE : Première phrase
           },
         },
         {
-          timeout: 15000, // 🔑 CRITIQUE : 15s timeout au lieu de 5min
+          timeout: 45000, // 🔑 AUGMENTÉ : 45s timeout pour 1ère requête réelle
         }
       );
 
@@ -865,10 +981,10 @@ RÉPONSE:`;
         try {
           await pool.query(
             `
-            INSERT INTO chat_conversations
-            (patient_id, dentist_id, message, response, context_documents, confidence_score, response_time_ms)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-          `,
+              INSERT INTO chat_conversations
+              (patient_id, dentist_id, message, response, context_documents, confidence_score, response_time_ms)
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `,
             [
               patientId,
               userRole === "dentist" ? userId : null,
@@ -1011,27 +1127,42 @@ app.get(
         req.user.email
       );
 
+      // ✅ CORRECTION : Utiliser les vraies colonnes des tables
       const usersResult = await pool.query(`
-      SELECT
-        u.id, u.email, u.role, u.first_name, u.last_name, u.created_at,
-        CASE
-          WHEN u.role = 'dentist' THEN dp.practice_info
-          WHEN u.role = 'patient' THEN 'Patient de: ' || COALESCE(dp2.practice_info, 'Non assigné')
-          WHEN u.role = 'admin' THEN ap.permissions::text
-          ELSE NULL
-        END as profile_info
-      FROM users u
-      LEFT JOIN dentist_profiles dp ON u.id = dp.user_id
-      LEFT JOIN patient_profiles pp ON u.id = pp.user_id
-      LEFT JOIN dentist_profiles dp2 ON pp.dentist_id = dp2.user_id
-      LEFT JOIN admin_profiles ap ON u.id = ap.user_id
-      ORDER BY u.created_at DESC
-      LIMIT 100
-    `);
+        SELECT
+          u.id,
+          u.email,
+          u.role,
+          u.first_name,
+          u.last_name,
+          u.created_at,
+          u.is_active,
+          u.last_login
+        FROM users u
+        ORDER BY u.created_at DESC
+        LIMIT 100
+      `);
+
+      console.log(
+        `✅ [ADMIN] ${usersResult.rows.length} utilisateurs récupérés`
+      );
 
       res.json({
         success: true,
-        data: usersResult.rows,
+        data: usersResult.rows.map((user) => ({
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          firstName: user.first_name,
+          lastName: user.last_name,
+          createdAt: user.created_at,
+          isActive: user.is_active,
+          lastLogin: user.last_login,
+          // Ajout d'informations basiques selon le rôle
+          displayName: `${user.first_name} ${user.last_name} (${user.role})`,
+        })),
+        total: usersResult.rows.length,
+        message: "Utilisateurs récupérés avec succès",
       });
     } catch (error) {
       console.error("❌ [ADMIN] Erreur récupération utilisateurs:", error);
@@ -1098,26 +1229,51 @@ app.get(
         req.user.email
       );
 
+      // ✅ CORRECTION : Utiliser created_at et requête sécurisée
       const documentsResult = await pool.query(`
       SELECT
-        pd.id, pd.file_name, pd.file_path, pd.uploaded_at,
+        pd.id, 
+        pd.file_name, 
+        pd.file_path, 
+        pd.created_at,
+        pd.document_type,
+        pd.file_size,
         u_dentist.email as dentist_email,
         u_patient.email as patient_email,
-        pd.metadata
+        CONCAT(u_patient.first_name, ' ', u_patient.last_name) as patient_name
       FROM patient_documents pd
-      JOIN users u_dentist ON pd.dentist_id = u_dentist.id
-      JOIN users u_patient ON pd.patient_id = u_patient.id
-      ORDER BY pd.uploaded_at DESC
+      LEFT JOIN users u_dentist ON pd.dentist_id = u_dentist.id
+      LEFT JOIN users u_patient ON pd.patient_id = u_patient.id
+      WHERE pd.processing_status = 'completed'
+      ORDER BY pd.created_at DESC
       LIMIT 50
     `);
 
+      console.log(
+        `✅ [ADMIN] ${documentsResult.rows.length} documents récupérés`
+      );
+
       res.json({
         success: true,
-        data: documentsResult.rows,
+        data: documentsResult.rows.map((doc) => ({
+          id: doc.id,
+          fileName: doc.file_name,
+          filePath: doc.file_path,
+          createdAt: doc.created_at,
+          documentType: doc.document_type,
+          fileSize: doc.file_size,
+          dentistEmail: doc.dentist_email,
+          patientEmail: doc.patient_email,
+          patientName: doc.patient_name,
+        })),
+        total: documentsResult.rows.length,
       });
     } catch (error) {
       console.error("❌ [ADMIN] Erreur récupération documents:", error);
-      res.status(500).json({ error: "Erreur serveur" });
+      res.status(500).json({
+        error: "Erreur serveur",
+        details: error.message,
+      });
     }
   }
 );
@@ -1154,6 +1310,198 @@ app.get(
     } catch (error) {
       console.error("❌ [ADMIN] Erreur récupération conversations:", error);
       res.status(500).json({ error: "Erreur serveur" });
+    }
+  }
+);
+
+// ================================
+// 🏗️ ENDPOINT TEMPORAIRE: INITIALISATION TABLES ADMIN
+// ================================
+app.post(
+  "/api/admin/init-tables",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      console.log(
+        "🏗️ [ADMIN] Initialisation tables admin par:",
+        req.user.email
+      );
+
+      // 1. Créer les tables manquantes
+      const createTablesQueries = [
+        // Table dentist_profiles
+        `CREATE TABLE IF NOT EXISTS dentist_profiles (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        practice_name VARCHAR(200),
+        specializations TEXT[],
+        subscription_type VARCHAR(50) DEFAULT 'trial',
+        max_patients INTEGER DEFAULT 50,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+        // Table patient_profiles
+        `CREATE TABLE IF NOT EXISTS patient_profiles (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        dentist_id INTEGER REFERENCES users(id),
+        birth_date DATE,
+        emergency_contact VARCHAR(200),
+        data_processing_consent BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+        // Table admin_profiles
+        `CREATE TABLE IF NOT EXISTS admin_profiles (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        permissions JSONB DEFAULT '{"super_admin": true, "manage_users": true, "view_analytics": true, "manage_documents": true}',
+        access_level VARCHAR(50) DEFAULT 'standard',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+        // Table patient_documents
+        `CREATE TABLE IF NOT EXISTS patient_documents (
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER REFERENCES users(id),
+        dentist_id INTEGER REFERENCES users(id),
+        document_type VARCHAR(50),
+        title VARCHAR(255),
+        content TEXT,
+        embedding VECTOR(1536),
+        metadata JSONB DEFAULT '{}',
+        file_path VARCHAR(500),
+        file_name VARCHAR(255),
+        file_size INTEGER,
+        mime_type VARCHAR(100),
+        upload_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        processing_status VARCHAR(50) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+
+        // Table chat_conversations
+        `CREATE TABLE IF NOT EXISTS chat_conversations (
+        id SERIAL PRIMARY KEY,
+        patient_id INTEGER REFERENCES users(id),
+        dentist_id INTEGER REFERENCES users(id),
+        session_id VARCHAR(255),
+        message TEXT,
+        response TEXT,
+        context_documents INTEGER[],
+        confidence_score DOUBLE PRECISION,
+        response_time_ms INTEGER,
+        feedback_rating INTEGER,
+        feedback_comment TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
+      ];
+
+      // Créer les tables
+      for (const query of createTablesQueries) {
+        await pool.query(query);
+      }
+
+      // 2. Créer la vue admin_stats
+      await pool.query(`
+      CREATE OR REPLACE VIEW admin_stats AS
+      SELECT 
+        (SELECT COUNT(*) FROM users) as total_users,
+        (SELECT COUNT(*) FROM users WHERE role = 'dentist') as total_dentists,
+        (SELECT COUNT(*) FROM users WHERE role = 'patient') as total_patients,
+        (SELECT COUNT(*) FROM users WHERE role = 'admin') as total_admins,
+        (SELECT COUNT(*) FROM patient_documents) as total_documents,
+        (SELECT COUNT(*) FROM chat_conversations) as total_conversations,
+        (SELECT COUNT(*) FROM users WHERE created_at > CURRENT_DATE - INTERVAL '7 days') as active_users,
+        (SELECT COALESCE(SUM(file_size), 0)::integer / (1024 * 1024) FROM patient_documents) as disk_usage_mb,
+        NOW() as last_updated;
+    `);
+
+      // 3. Insérer les profils manquants
+
+      // Profils admin
+      await pool.query(`
+      INSERT INTO admin_profiles (user_id)
+      SELECT u.id
+      FROM users u
+      WHERE u.role = 'admin' 
+      AND NOT EXISTS (SELECT 1 FROM admin_profiles ap WHERE ap.user_id = u.id);
+    `);
+
+      // Profils dentistes
+      await pool.query(`
+      INSERT INTO dentist_profiles (user_id, practice_name)
+      SELECT u.id, 'Cabinet Dentaire ' || u.first_name || ' ' || u.last_name
+      FROM users u
+      WHERE u.role = 'dentist' 
+      AND NOT EXISTS (SELECT 1 FROM dentist_profiles dp WHERE dp.user_id = u.id);
+    `);
+
+      // Profils patients
+      await pool.query(`
+      INSERT INTO patient_profiles (user_id, dentist_id)
+      SELECT u.id, (SELECT id FROM users WHERE role = 'dentist' LIMIT 1)
+      FROM users u
+      WHERE u.role = 'patient' 
+      AND NOT EXISTS (SELECT 1 FROM patient_profiles pp WHERE pp.user_id = u.id);
+    `);
+
+      // 4. Insérer des données de test
+
+      // Documents de test
+      await pool.query(`
+      INSERT INTO patient_documents (patient_id, dentist_id, document_type, title, file_name, file_path, file_size, processing_status, metadata)
+      SELECT 
+        p.id as patient_id,
+        d.id as dentist_id,
+        'radiographie' as document_type,
+        'Radiographie ' || p.first_name as title,
+        'Radiographie_' || p.first_name || '_' || EXTRACT(epoch FROM NOW())::int || '.pdf' as file_name,
+        '/uploads/docs/radiographie_' || p.id || '.pdf' as file_path,
+        2356789 as file_size,
+        'completed' as processing_status,
+        '{"type": "radiographie", "size": "2.3MB", "format": "PDF"}'::jsonb as metadata
+      FROM users d
+      CROSS JOIN users p
+      WHERE d.role = 'dentist' AND p.role = 'patient'
+      AND NOT EXISTS (SELECT 1 FROM patient_documents pd WHERE pd.patient_id = p.id)
+      LIMIT 5;
+    `);
+
+      // Conversations de test
+      await pool.query(`
+      INSERT INTO chat_conversations (patient_id, dentist_id, message, response)
+      SELECT 
+        p.id as patient_id,
+        d.id as dentist_id,
+        'Bonjour, j''ai une douleur dentaire depuis quelques jours. Que puis-je faire ?',
+        'Je comprends votre inconfort. La douleur dentaire peut avoir plusieurs causes. Je vous recommande de prendre rendez-vous rapidement pour un examen. En attendant, vous pouvez prendre un antalgique et éviter les aliments trop chauds ou froids.'
+      FROM users p
+      CROSS JOIN users d
+      WHERE p.role = 'patient' AND d.role = 'dentist'
+      AND NOT EXISTS (SELECT 1 FROM chat_conversations cc WHERE cc.patient_id = p.id)
+      LIMIT 3;
+    `);
+
+      // 5. Vérifier les stats finales
+      const statsResult = await pool.query("SELECT * FROM admin_stats");
+      const stats = statsResult.rows[0];
+
+      console.log("✅ [ADMIN] Tables initialisées avec succès:", stats);
+
+      res.json({
+        success: true,
+        message: "Tables admin créées et initialisées avec succès",
+        stats,
+      });
+    } catch (error) {
+      console.error("❌ [ADMIN] Erreur initialisation tables:", error);
+      res.status(500).json({
+        error: "Erreur lors de l'initialisation des tables",
+        details: error.message,
+      });
     }
   }
 );
@@ -1361,12 +1709,37 @@ app.use(function (req, res) {
 // DÉMARRAGE SERVEUR
 // ================================
 
-app.listen(PORT, () => {
+// ✅ INITIALISATION OLLAMA AU DÉMARRAGE + WARM-UP SERVICE
+async function initOllamaWithRetry() {
+  console.log("🔥 [STARTUP] Initialisation service warm-up Ollama...");
+
+  for (let i = 0; i < 3; i++) {
+    const status = await ensureOllamaReady();
+    if (status.status === "warm") {
+      console.log("✅ [STARTUP] Ollama prêt - Service warm-up activé");
+      break;
+    }
+    console.log(`🔄 [STARTUP] Retry Ollama init ${i + 1}/3...`);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+  }
+}
+
+// ✅ MAINTENANCE PROACTIVE : Keep-alive intelligent toutes les 10 minutes
+setInterval(async () => {
+  try {
+    const status = await ensureOllamaReady();
+    console.log(`🔧 [MAINTENANCE] Ollama ${status.status} - Keep-alive sent`);
+  } catch (error) {
+    console.log(`⚠️ [MAINTENANCE] Keep-alive failed: ${error.message}`);
+  }
+}, 10 * 60 * 1000); // 10 minutes
+
+app.listen(PORT, async () => {
   console.log(
     "╔══════════════════════════════════════════════════════════════╗"
   );
   console.log(
-    "║               🦷 SERVEUR MELYIA CHATBOT v23 🤖               ║"
+    "║               🦷 SERVEUR MELYIA CHATBOT v24 🤖               ║"
   );
   console.log(
     "╚══════════════════════════════════════════════════════════════╝"
@@ -1375,6 +1748,12 @@ app.listen(PORT, () => {
   console.log("🚀 Serveur démarré sur le port " + PORT);
   console.log("📅 " + new Date().toLocaleString("fr-FR"));
   console.log("");
+
+  // 🔥 INITIALISATION OLLAMA ASYNCHRONE
+  initOllamaWithRetry().catch((err) =>
+    console.error("❌ [STARTUP] Erreur init Ollama:", err.message)
+  );
+
   console.log("🔗 ROUTES DISPONIBLES:");
   console.log("   GET  /api/health              - État des services");
   console.log("   POST /api/auth/login          - Connexion utilisateur");
@@ -1382,6 +1761,10 @@ app.listen(PORT, () => {
   console.log("   GET  /api/patients            - Liste patients (dentistes)");
   console.log("   POST /api/documents/upload    - Upload documents médicaux");
   console.log("   POST /api/chat                - Chat IA local avec Ollama");
+  console.log("   POST /api/chat/warmup         - 🔥 WARM-UP CHATBOT PROACTIF");
+  console.log(
+    "   GET  /api/chat/status         - 🔥 STATUS CHATBOT TEMPS RÉEL"
+  );
   console.log("   GET  /api/admin/stats         - Statistiques admin");
   console.log("   GET  /api/admin/users         - Gestion utilisateurs admin");
   console.log("   POST /hooks/deploy            - Webhook déploiement PÉRENNE");

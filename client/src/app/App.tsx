@@ -129,17 +129,7 @@ const AppRoutes: React.FC = () => {
         {/* Routes protégées - Admin */}
         <Route path="/admin/dashboard">
           <ProtectedRoute allowedRoles={["admin"]}>
-            {/* Remplacez par votre composant AdminDashboard quand il sera créé */}
-            <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <h1 className="text-3xl font-bold text-blue-600 mb-4">
-                  🎯 Dashboard Admin
-                </h1>
-                <p className="text-gray-600">
-                  Interface d'administration Melyia
-                </p>
-              </div>
-            </div>
+            <AdminDashboard />
           </ProtectedRoute>
         </Route>
 

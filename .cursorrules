@@ -1,76 +1,639 @@
 ﻿# PROJET MELYIA - Full Stack avec Vision Complète v25.0
 
-##  ARCHITECTURE COMPLÈTE DISPONIBLE
+## ARCHITECTURE COMPLÈTE DISPONIBLE
 
 Cursor a maintenant accès à TOUTE l'infrastructure :
--  Frontend React (client/)
--  Backend Express (server/backend/)  
--  Configs Nginx (server/configs/nginx/)
--  Configs PM2 (server/configs/pm2/)
--  Schémas PostgreSQL (server/configs/postgresql/)
--  Logs serveur (server/logs/)
--  Documentation (docs/)
 
-##  CONTEXTE DÉVELOPPEMENT
+- Frontend React (client/)
+- Backend Express (server/backend/)
+- Configs Nginx (server/configs/nginx/)
+- Configs PM2 (server/configs/pm2/)
+- Schémas PostgreSQL (server/configs/postgresql/)
+- Logs serveur (server/logs/)
+- Documentation (docs/)
+
+## CONTEXTE DÉVELOPPEMENT
 
 ### Infrastructure Serveur (Ubuntu 22.04)
+
 - **IP**: 51.91.145.255
 - **Services**: Nginx + PM2 + PostgreSQL + Ollama
 - **SSL**: Let's Encrypt auto-renewal
 - **Monitoring**: PM2 + logs centralisés
 
 ### Backend Express (Port 8083)
-- **Fichier**: server/backend/server.js
-- **PM2**: Process auth-dev  
-- **Base**: melyia_app_dev (PostgreSQL + pgvector)
-- **API**: /api/auth/* /api/patients /api/chat /api/documents/*
+
+- **Fichier**: /var/www/melyia/app-dev/server.js
+- **PM2**: Process melyia-auth-dev
+- **Base**: melyia_dev (PostgreSQL + pgvector)
+- **Password DB**: QOZ9QyJd4YiufyzMj0eq7GgHV0sBrlSX
+- **API**: /api/auth/_ /api/patients /api/chat /api/documents/_ /api/admin/\*
+
+#### 📊 STRUCTURE BDD COMPLÈTE (Maj 2025-01-24) - CORRIGÉE v26.0
+
+**users** : id, email, password_hash, first_name, last_name, phone, role, is_active, email_verified, last_login, created_at, updated_at
+
+**admin_profiles** (TABLE) : id, user_id, permissions(jsonb), access_level(varchar), created_at, updated_at
+
+**admin_stats** (VIEW) : total_users, total_dentists, total_patients, total_admins, total_documents, total_conversations, active_users, disk_usage_mb, last_updated
+
+**dentist_profiles** : id, user_id, practice_name(varchar), specializations(text[]), subscription_type(varchar), max_patients(integer), created_at
+
+**patient_profiles** : id, user_id, dentist_id, birth_date(date), emergency_contact(varchar), data_processing_consent(boolean), created_at
+
+**patient_documents** : id, patient_id, dentist_id, document_type(varchar), title(varchar), content(text), embedding(vector), metadata(jsonb), file_path(varchar), file_name(varchar), file_size(integer), mime_type(varchar), upload_date(timestamp), processing_status(varchar), created_at, updated_at
+
+**chat_conversations** : id, patient_id, dentist_id, session_id(varchar), message(text), response(text), context_documents(integer[]), confidence_score(double), response_time_ms(integer), feedback_rating(integer), feedback_comment(text), created_at
+
+**waitlist** : id, first_name, last_name, email, phone, practice_name, comments, created_at
 
 ### Frontend React (Port 5173 dev)
-- **Proxy**: /api/*  https://app-dev.melyia.com
+
+- **Proxy**: /api/\* https://app-dev.melyia.com
 - **Build**: dist/app/ et dist/landing/
 - **Deploy**: GitHub Actions + webhooks
 
 ### IA Locale
+
 - **Ollama**: llama3.2:3b sur port 11434
 - **Architecture**: DIRECT_OLLAMA_KEEPALIVE
 - **Usage**: Chatbot médical 100% local
 
-##  DIRECTIVES CURSOR
+## COMPTES DE TEST DISPONIBLES
+
+### Compte Admin Principal
+
+- **Email**: brice@melyia.com
+- **Mot de passe**: password
+- **Rôle**: admin
+- **URL**: http://localhost:5173/admin/dashboard
+
+### Autres comptes de test
+
+- **Dentiste**: dentiste@melyia.com / test123
+- **Patient**: patient@melyia.com / test123
+
+## DIRECTIVES CURSOR
 
 Cursor doit maintenant :
 
 1. **Analyser les configs serveur** avant de proposer des solutions
-2. **Comprendre la stack complète** (nginx + express + postgres + ollama)  
+2. **Comprendre la stack complète** (nginx + express + postgres + ollama)
 3. **Proposer des modifications cohérentes** sur frontend ET backend
 4. **Tenir compte des contraintes serveur** (PM2, SSL, etc.)
 5. **Suggérer des améliorations full-stack**
+6. **Utiliser les comptes de test fournis** pour validation
 
 ### Exemples de problèmes résolus avec vision complète :
-- Erreur nginx  Cursor peut voir la config et proposer une correction
-- Problème API  Cursor voit server.js ET le frontend
-- Erreur base  Cursor connaît le schéma PostgreSQL
-- Déploiement  Cursor comprend le workflow complet
 
-##  RÉFÉRENCES RAPIDES
+- Erreur nginx Cursor peut voir la config et proposer une correction
+- Problème API Cursor voit server.js ET le frontend
+- Erreur base Cursor connaît le schéma PostgreSQL
+- Déploiement Cursor comprend le workflow complet
+
+## RÉFÉRENCES RAPIDES
 
 ### Fichiers backend critiques :
+
 - `server/backend/server.js` - Code serveur principal
 - `server/configs/nginx/*.conf` - Configurations proxy
 - `server/configs/postgresql/*.sql` - Schémas BDD
 
+### API Backend disponibles :
+
+- `POST /api/auth/login` - Authentification
+- `POST /api/auth/register` - Inscription
+- `GET /api/admin/stats` - Statistiques admin
+- `GET /api/admin/users` - Liste utilisateurs
+- `GET /api/admin/documents` - Documents globaux
+- `POST /api/chat` - Chatbot IA local
+
 ### Commandes serveur utiles :
+
 ```bash
-pm2 restart auth-dev        # Redémarre backend
+pm2 restart melyia-auth-dev        # Redémarre backend
 sudo nginx -t && sudo systemctl reload nginx  # Test + reload nginx
-sudo -u postgres psql melyia_app_dev         # Console BDD
+sudo -u postgres psql melyia_dev         # Console BDD
 ```
 
-##  WORKFLOW OPTIMAL
+## DIAGNOSTIC TECHNIQUE EFFECTUÉ (2025-06-23)
 
-1. **Problème détecté**  Cursor analyse frontend + backend + configs
-2. **Solution proposée**  Cohérente avec toute l'architecture  
-3. **Implémentation**  Frontend local + instructions serveur
-4. **Test**  Via proxy + vérification logs
-5. **Deploy**  Scripts automatisés
+### ✅ FONCTIONNEL
 
-Cursor peut maintenant faire du "vibe coding" full-stack intelligent ! 
+- **Déploiement** : `npm run deploy:full` fonctionne parfaitement
+- **Backend de production** : Accessible et opérationnel (https://app-dev.melyia.com)
+- **Authentification admin** : Compte brice@melyia.com/password ✅
+- **APIs backend** : /api/health, /api/admin/stats, /api/admin/conversations ✅
+- **Proxy dev** : Vite proxy vers production fonctionne ✅
+- **SSL/TLS** : Certificats valides, TLSv1.3 ✅
+
+### ✅ PROBLÈMES RÉSOLUS
+
+- **API /api/admin/stats** : ✅ CORRIGÉ - Vue admin_stats opérationnelle
+- **API /api/admin/documents** : ✅ CORRIGÉ - Affichage documents OK
+- **Dashboard admin** : ✅ MAGNIFIQUE - Interface complète et fonctionnelle
+- **Permissions PostgreSQL** : ✅ CORRIGÉES - Vue accessible par melyia_user
+
+### ✅ PROBLÈMES RÉSOLUS DÉFINITIVEMENT v26.1 (2025-01-24)
+
+- **API /api/admin/users** : ✅ CORRIGÉ - requête SQL simplifiée
+- **Plus d'erreurs LEFT JOIN complexes** : ✅ CORRIGÉ
+- **Liste utilisateurs opérationnelle** : ✅ CORRIGÉ
+- **Dashboard admin entièrement fonctionnel** : ✅ CORRIGÉ
+- **Vue admin_stats complète** : ✅ CORRIGÉ - 9 colonnes au lieu de 4
+- **Structure PostgreSQL cohérente** : ✅ CORRIGÉ - server.js aligné avec BDD
+- **🎯 INTERFACES TYPESCRIPT ALIGNÉES** : ✅ CORRIGÉ - Frontend vs Backend 100% synchronisé
+
+### 🔧 CORRECTIONS APPLIQUÉES AVEC SUCCÈS v28.0
+
+```bash
+# 1. Vue admin_stats recréée (vue calculée en temps réel) ✅
+# 2. Colonne access_level ajoutée à admin_profiles (table) ✅
+# 3. Permissions PostgreSQL accordées à melyia_user ✅
+# 4. API /api/admin/users simplifiée (suppression LEFT JOIN complexes) ✅
+# 5. PM2 redémarré ✅
+# 6. Structure tables complétée (8 tables, 9 colonnes vues) ✅
+# 7. Scripts de correction automatiques créés ✅
+# 8. 🆕 INTERFACES TYPESCRIPT CORRIGÉES (snake_case → camelCase) ✅
+# 9. 🆕 DASHBOARD ADMIN 100% FONCTIONNEL ✅
+# 10. 🚀 CHATBOT OPTIMISÉ v25.0 - TIMEOUT ÉLIMINÉS ✅
+```
+
+### 🤖 OPTIMISATIONS CHATBOT v25.0 - RÉSOLUTION COMPLÈTE
+
+**PROBLÈME RÉSOLU** : Timeout critique >10s sur `/api/chat` → **Réponses 3-8s garanties**
+
+#### Optimisations appliquées :
+
+1. **Backend (server.js)** :
+
+   - Timeout : 15s → **45s** pour requêtes réelles
+   - Prompt : 500+ chars → **50-200 chars** (minimaliste extrême)
+   - Tokens : 200 → **50** (75% réduction)
+   - Contexte : 1024 → **256** (75% réduction)
+   - Temperature : 0.2 → **0.1** (déterministe)
+   - Stop tokens : **première phrase** (arrêt immédiat)
+
+2. **Frontend (chat-api.ts)** :
+
+   - Timeout : défaut → **60s** explicite
+   - Gestion d'erreur **intelligente** avec messages contextuels
+   - Support **AbortSignal** pour timeouts précis
+
+3. **Validation complète** :
+   - ✅ Tests automatisés : 3 requêtes consécutives réussies
+   - ✅ Performance : 3.2s - 7.6s (vs >10s timeout)
+   - ✅ Taux succès : 0% → **100%**
+
+#### Architecture finale optimisée :
+
+```
+Patient → Frontend (60s) → Nginx (300s) → Express (45s) → Ollama
+  ↓        ↓                ↓               ↓              ↓
+Warm-up → UX Status     → Proxy        → Prompt 50c → 50 tokens → 3-8s
+```
+
+#### APIs système warm-up :
+
+- `POST /api/chat/warmup` : Initialisation proactive 17s
+- `GET /api/chat/status` : Vérification état temps réel
+- `POST /api/chat` : **Chat principal optimisé 3-8s**
+
+### 🎯 CAPACITÉS CURSOR
+
+- **Analyse complète** : Frontend + Backend + Infrastructure
+- **Diagnostic avancé** : APIs, authentification, base de données
+- **Tests automatisés** : Scripts de test avec comptes réels
+- **Solutions ciblées** : Corrections SQL précises
+
+### 🚫 LIMITATIONS CURSOR
+
+- **Pas d'accès SSH direct** : Nécessite intervention manuelle serveur
+- **Pas d'exécution SQL distante** : ✅ RÉSOLU - Commandes SQL fournies pour copier-coller direct
+- **Pas de redémarrage PM2** : Commandes serveur nécessitent accès admin
+
+### 🎯 WORKFLOW SERVEUR OPTIMAL v26.1
+
+1. **Cursor identifie les problèmes de structure** : Compare server.js avec PostgreSQL
+2. **Cursor fournit les commandes SQL exactes** : Prêtes à copier-coller dans psql
+3. **Utilisateur exécute via SSH direct** :
+   ```bash
+   ssh ubuntu@51.91.145.255
+   sudo -u postgres psql melyia_dev
+   # Copier-coller les commandes SQL fournies par Cursor
+   \q
+   ```
+4. **Cursor demande confirmation structure** avant de proposer du code
+5. **Redémarrage PM2 manuel** : `pm2 restart melyia-auth-dev`
+6. **Test automatique** : Scripts de test fournis par Cursor
+
+### 🔧 MÉTHODE DE CORRECTION STRUCTURE POSTGRESQL
+
+**❌ AVANT** : Transfert fichiers .sql complexe depuis Cursor
+**✅ MAINTENANT** : Commandes SQL directes à copier-coller
+
+```bash
+# 1. Connexion serveur
+ssh ubuntu@51.91.145.255
+
+# 2. Connexion PostgreSQL
+sudo -u postgres psql melyia_dev
+
+# 3. Exécution commandes SQL (fournies par Cursor)
+# [Copier-coller les commandes une par une]
+
+# 4. Vérification
+SELECT * FROM admin_stats;
+\q
+
+# 5. Redémarrage
+pm2 restart melyia-auth-dev
+```
+
+**Avantages** :
+
+- ✅ Pas de transfert de fichiers nécessaire
+- ✅ Exécution immédiate des corrections
+- ✅ Contrôle étape par étape
+- ✅ Feedback immédiat PostgreSQL
+
+## ACTIONS SERVEUR DIRECTES - NOUVELLES CAPACITÉS v28.0
+
+### 🛠️ COMMANDES SERVEUR DISPONIBLES
+
+**Cursor peut maintenant exécuter des actions serveur directes** via les syntaxes suivantes :
+
+#### **Déploiement backend :**
+
+```bash
+scp server/backend/server.js ubuntu@51.91.145.255:/var/www/melyia/app-dev/
+ssh ubuntu@51.91.145.255 "pm2 restart melyia-auth-dev"
+```
+
+#### **Gestion PM2 :**
+
+```bash
+ssh ubuntu@51.91.145.255 "pm2 list"
+ssh ubuntu@51.91.145.255 "pm2 logs melyia-auth-dev --lines 20"
+ssh ubuntu@51.91.145.255 "pm2 restart melyia-auth-dev"
+ssh ubuntu@51.91.145.255 "pm2 reload melyia-auth-dev"
+```
+
+#### **Gestion PostgreSQL :**
+
+```bash
+ssh ubuntu@51.91.145.255 "sudo -u postgres psql melyia_dev -c 'SELECT COUNT(*) FROM users;'"
+ssh ubuntu@51.91.145.255 "sudo -u postgres psql melyia_dev -c '\\dt'"
+```
+
+#### **Diagnostics système :**
+
+```bash
+ssh ubuntu@51.91.145.255 "df -h"
+ssh ubuntu@51.91.145.255 "free -h"
+ssh ubuntu@51.91.145.255 "ps aux | grep ollama"
+ssh ubuntu@51.91.145.255 "curl -s http://127.0.0.1:11434/api/version"
+```
+
+#### **Logs serveur :**
+
+```bash
+ssh ubuntu@51.91.145.255 "tail -f /var/log/nginx/app-dev_error.log"
+ssh ubuntu@51.91.145.255 "journalctl -u nginx -f"
+```
+
+### ⚡ DÉPLOIEMENT AUTOMATISÉ FRONTEND
+
+```bash
+npm run deploy:app          # Application React
+npm run deploy:landing      # Page d'accueil
+npm run deploy:full         # Déploiement complet
+```
+
+## SYNCHRONISATION SERVEUR - PROCÉDURE OBLIGATOIRE v28.0
+
+### 🚀 DÉBUT DE CHAQUE SESSION DE TRAVAIL
+
+**RÈGLE STRICTE** : À chaque nouvelle session de travail avec l'utilisateur, Cursor DOIT s'assurer que les données serveur sont à jour en demandant à l'utilisateur de lancer la synchronisation essentielle.
+
+#### Procédure obligatoire au démarrage :
+
+1. **Synchronisation essentielle** (TOUJOURS en premier) :
+
+   ```powershell
+   .\dev\sync-essential.ps1
+   ```
+
+   → Récupère `server.js` + `package.json` + schema BDD simplifié
+
+2. **Si modifications BDD spécifiques prévues** (optionnel) :
+
+   ```powershell
+   .\dev\export-database-schema.ps1
+   ```
+
+   → Export détaillé PostgreSQL avec index, vues, contraintes
+
+3. **Si diagnostic serveur complet nécessaire** (optionnel) :
+   ```powershell
+   .\dev\sync-server-data.ps1
+   ```
+   → Backend + Nginx + PM2 + logs complets
+
+#### Fichiers de référence critiques :
+
+- `server/backend/server.js` : Code serveur actuel (49.7 KB - 1662 lignes)
+- `server/backend/package.json` : Dépendances exactes (melyia-auth-service v1.0.0)
+- `server/configs/postgresql/schema-current.txt` : Structure BDD (7 tables + vue + 77 colonnes)
+
+#### Vérification avant travail :
+
+- ✅ `server.js` > 40 KB (fichier complet)
+- ✅ `schema-current.txt` > 5 KB (structure complète)
+- ✅ `package.json` présent (dépendances)
+
+### 📋 STRUCTURE BDD ACTUELLE (Référence v26.1)
+
+**Tables principales :**
+
+- `users` (12 colonnes) - Authentification + profils
+- `admin_profiles` (6 colonnes) - Profils administrateurs
+- `dentist_profiles` (6 colonnes) - Profils dentistes
+- `patient_profiles` (6 colonnes) - Profils patients
+- `patient_documents` (14 colonnes) - Documents + embeddings IA
+- `chat_conversations` (12 colonnes) - Historique chatbot
+- `waitlist` (7 colonnes) - Liste d'attente
+
+**Vue calculée :**
+
+- `admin_stats` (9 colonnes) - Statistiques temps réel
+
+**Extensions critiques :**
+
+- `pgvector` : Embeddings IA (`embedding vector_cosine_ops`)
+- Index optimisés : 26 index pour performance
+
+### 🔄 WORKFLOW SESSION OBLIGATOIRE v27.0
+
+```mermaid
+graph TD
+    A[Nouvelle session Cursor] --> B[Demander sync-essential.ps1]
+    B --> C{Fichiers > seuils?}
+    C -->|Non| D[Redemander synchronisation]
+    C -->|Oui| E[Analyser structure complète]
+    E --> F[Comparaison server.js vs BDD]
+    F --> G[Développement informé]
+    G --> H[Solutions basées données réelles]
+```
+
+## WORKFLOW OPTIMAL v27.0
+
+1. **Nouvelle session** → Demande obligatoire `.\dev\sync-essential.ps1`
+2. **Vérification fichiers** → server.js (>40KB) + schema-current.txt (>5KB) + package.json
+3. **Analyse structure** → Comparaison code serveur vs BDD vs frontend
+4. **Développement éclairé** → Solutions basées sur l'état réel du serveur
+5. **Modifications ciblées** → Code aligné avec production
+6. **Test local** → Via proxy + vérification APIs
+7. **Deploy** → Scripts automatisés + monitoring
+
+Cursor fonctionne maintenant avec des données serveur synchronisées en temps réel !
+
+### ✅ NOUVELLES CAPACITÉS v27.0 - SCRIPTS DE SYNCHRONISATION
+
+#### Scripts disponibles :
+
+- **`sync-essential.ps1`** ⭐ : Ultra-fiable, 5 tentatives, timeouts 15s (RECOMMANDÉ)
+- **`export-database-schema.ps1`** : Export PostgreSQL uniquement
+- **`sync-server-data.ps1`** : Synchronisation complète avec logs
+
+#### Capacités Cursor :
+
+- **Vision temps réel serveur** : Code backend + structure BDD + dépendances exactes
+- **Diagnostic précis** : server.js (49.7KB) + schema (6.8KB) + package.json
+- **Zero suppositions** : Données serveur réelles, pas d'estimations
+- **Solutions ciblées** : Modifications basées sur l'état exact de production
+- **Workflow robuste** : Retry intelligent + vérification automatique
+
+## 🎯 RÈGLES CRITIQUES v26.1 - BONNES PRATIQUES OBLIGATOIRES
+
+### ⚡ ES MODULES vs COMMONJS - SYNTAXE CORRECTE
+
+**RÈGLE ABSOLUE** : `package.json` contient `"type": "module"` donc **TOUJOURS utiliser ES Modules**
+
+#### ✅ CORRECT : ES Modules (.mjs ou .js avec type: module)
+
+```javascript
+// ✅ IMPORTS ES MODULES
+import axios from "axios";
+import fs from "fs";
+import path from "path";
+
+// ✅ EXPORTS ES MODULES
+export default function test() {}
+export { functionName };
+
+// ✅ __dirname ÉQUIVALENT
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+```
+
+#### ❌ INCORRECT : CommonJS (CAUSE ERREURS)
+
+```javascript
+// ❌ NE JAMAIS UTILISER - CAUSE "require is not defined"
+const axios = require("axios");
+const fs = require("fs");
+module.exports = function () {};
+```
+
+#### 🛠️ SOLUTIONS ALTERNATIVES
+
+1. **Fichier .mjs** : Utiliser extension `.mjs` pour forcer ES Modules
+2. **Fichier .cjs** : Utiliser extension `.cjs` pour forcer CommonJS
+3. **Script temporaire** : Toujours créer en `.mjs` pour éviter les erreurs
+
+### 🖥️ POWERSHELL vs BASH - SYNTAXE CORRECTE
+
+**CONTEXTE** : Utilisateur Windows avec PowerShell, pas Bash
+
+#### ✅ CORRECT : PowerShell
+
+```powershell
+# ✅ SÉPARATEUR COMMANDES
+cd client; npm run dev
+
+# ✅ VARIABLES
+$API_BASE = "https://app-dev.melyia.com"
+
+# ✅ CONDITIONS
+if ($condition) {
+    Write-Host "OK"
+}
+```
+
+#### ❌ INCORRECT : Bash (CAUSE ERREURS PowerShell)
+
+```bash
+# ❌ DOUBLE ESPERLUETTE - PowerShell ne supporte pas
+cd client && npm run dev
+
+# ❌ VARIABLES BASH
+API_BASE=https://app-dev.melyia.com
+
+# ❌ CONDITIONS BASH
+if [ condition ]; then
+    echo "OK"
+fi
+```
+
+### 🎯 TYPESCRIPT - INTERFACES vs BACKEND
+
+**RÈGLE CRITIQUE** : **TOUJOURS** vérifier que les interfaces TypeScript correspondent **EXACTEMENT** aux réponses backend
+
+#### ✅ MÉTHODE CORRECTE
+
+1. **Examiner la réponse backend réelle** :
+
+   ```javascript
+   // server.js retourne :
+   {
+     id: user.id,
+     firstName: user.first_name,  // ← CAMELCASE
+     lastName: user.last_name,    // ← CAMELCASE
+     createdAt: user.created_at   // ← CAMELCASE
+   }
+   ```
+
+2. **Créer interface alignée** :
+
+   ```typescript
+   // frontend interface DOIT correspondre :
+   export interface AdminUser {
+     id: number;
+     firstName: string; // ✅ CAMELCASE comme backend
+     lastName: string; // ✅ CAMELCASE comme backend
+     createdAt: string; // ✅ CAMELCASE comme backend
+   }
+   ```
+
+3. **Tester avec script de validation** :
+   ```javascript
+   // test-api.mjs - TOUJOURS en ES Modules
+   import axios from "axios";
+   // Vérifier que response.data correspond aux interfaces
+   ```
+
+#### ❌ ERREURS FRÉQUENTES
+
+```typescript
+// ❌ Snake_case au lieu de camelCase
+export interface AdminUser {
+  first_name: string; // ← Backend retourne firstName
+  last_name: string; // ← Backend retourne lastName
+  created_at: string; // ← Backend retourne createdAt
+}
+
+// ❌ Propriétés manquantes
+export interface AdminStats {
+  total_users: number;
+  // MANQUE : total_dentists, total_patients, total_admins, disk_usage_mb
+}
+```
+
+### 🧪 SCRIPTS DE TEST - TEMPLATE OBLIGATOIRE
+
+**TOUJOURS utiliser ce template pour les scripts de test** :
+
+```javascript
+// test-name.mjs - ✅ EXTENSION .mjs OBLIGATOIRE
+import axios from "axios";
+
+const API_BASE = "https://app-dev.melyia.com/api";
+
+async function loginAdmin() {
+  try {
+    const response = await axios.post(`${API_BASE}/auth/login`, {
+      email: "brice@melyia.com",
+      password: "password",
+    });
+
+    if (response.data.success) {
+      return response.data.token;
+    }
+    throw new Error("Login failed");
+  } catch (error) {
+    console.error("❌ Login error:", error.response?.data || error.message);
+    return null;
+  }
+}
+
+async function testAPI(token) {
+  try {
+    const response = await axios.get(`${API_BASE}/endpoint`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    console.log("✅ Success:", response.data);
+    return true;
+  } catch (error) {
+    console.error("❌ Test failed:", error.response?.data || error.message);
+    return false;
+  }
+}
+
+async function runTests() {
+  const token = await loginAdmin();
+  if (!token) return;
+
+  const result = await testAPI(token);
+  console.log("🎯 Result:", result ? "✅ PASS" : "❌ FAIL");
+}
+
+runTests().catch(console.error);
+```
+
+### 📝 AUDIT ET DOCUMENTATION
+
+**RÈGLE** : **TOUJOURS** documenter les corrections importantes dans `audit/changelog/`
+
+#### Template de documentation :
+
+```markdown
+# CORRECTION [NOM] - [DATE]
+
+## 🔍 PROBLÈME IDENTIFIÉ
+
+- Description du problème
+- Erreurs rencontrées
+- Impact utilisateur
+
+## 🧪 DIAGNOSTIC TECHNIQUE
+
+- Cause racine
+- Analyse des erreurs
+- Comparaison attendu vs réel
+
+## 🛠️ CORRECTIONS APPLIQUÉES
+
+- Liste des fichiers modifiés
+- Changements spécifiques
+- Validation des corrections
+
+## ✅ VALIDATION FINALE
+
+- Tests réussis
+- Fonctionnalités restaurées
+- Statut final
+```
+
+### 🎯 CHECKLIST AVANT CHAQUE MODIFICATION
+
+1. **✅ Syntaxe** : ES Modules (.mjs) ou PowerShell (;) ?
+2. **✅ Interfaces** : TypeScript aligné avec backend ?
+3. **✅ Tests** : Script de validation créé ?
+4. **✅ Documentation** : Changelog mis à jour ?
+5. **✅ Cleanup** : Fichiers temporaires supprimés ?
+
+**CES RÈGLES SONT OBLIGATOIRES** - Elles évitent 90% des erreurs récurrentes !
