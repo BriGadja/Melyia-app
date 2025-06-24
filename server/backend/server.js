@@ -1315,6 +1315,365 @@ app.get(
 );
 
 // ================================
+// 🔔 ENDPOINT SPÉCIFIQUE: INITIALISATION TABLE NOTIFICATIONS
+// ================================
+app.post(
+  "/api/admin/init-notifications",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      console.log(
+        "🔔 [ADMIN] Initialisation table notifications par:",
+        req.user.email
+      );
+
+      // Créer uniquement la table notifications
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS notifications (
+          id SERIAL PRIMARY KEY,
+          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+          sender_id INTEGER REFERENCES users(id),
+          notification_type VARCHAR(50) DEFAULT 'message',
+          content TEXT NOT NULL,
+          link VARCHAR(255),
+          priority VARCHAR(20) DEFAULT 'normal',
+          is_read BOOLEAN DEFAULT FALSE,
+          read_at TIMESTAMP,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
+      // Insérer des données de test
+      await pool.query(`
+        INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
+        SELECT 
+          p.id as user_id,
+          d.id as sender_id,
+          'appointment' as notification_type,
+          'Rappel : Votre rendez-vous de contrôle est prévu demain à 14h30. N''oubliez pas d''apporter votre carte vitale.' as content,
+          '/patient/appointments' as link,
+          'high' as priority
+        FROM users p
+        CROSS JOIN users d
+        WHERE p.role = 'patient' AND d.role = 'dentist'
+        AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = p.id)
+        LIMIT 2;
+      `);
+
+      await pool.query(`
+        INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
+        SELECT 
+          d.id as user_id,
+          p.id as sender_id,
+          'message' as notification_type,
+          'Nouveau message d''un patient concernant des douleurs post-opératoires.' as content,
+          '/dentist/messages' as link,
+          'normal' as priority
+        FROM users d
+        CROSS JOIN users p
+        WHERE d.role = 'dentist' AND p.role = 'patient'
+        AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = d.id AND n.notification_type = 'message')
+        LIMIT 1;
+      `);
+
+      // Vérifier le nombre de notifications créées
+      const countResult = await pool.query(
+        "SELECT COUNT(*) as total FROM notifications"
+      );
+      const totalNotifications = countResult.rows[0].total;
+
+      console.log(
+        "✅ [ADMIN] Table notifications créée avec",
+        totalNotifications,
+        "entrées"
+      );
+
+      res.json({
+        success: true,
+        message: "Table notifications créée avec succès",
+        data: {
+          total_notifications: totalNotifications,
+          test_data_created: true,
+        },
+      });
+    } catch (error) {
+      console.error("❌ [ADMIN] Erreur initialisation notifications:", error);
+      res.status(500).json({
+        error: "Erreur lors de l'initialisation de la table notifications",
+        details: error.message,
+      });
+    }
+  }
+);
+
+// ================================
+// 🔔 ENDPOINTS NOTIFICATIONS CRUD
+// ================================
+
+// GET /api/notifications - Récupérer les notifications de l'utilisateur connecté
+app.get("/api/notifications", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    console.log(
+      "🔔 [NOTIFICATIONS] Récupération notifications pour utilisateur:",
+      userId,
+      "| req.user:",
+      req.user
+    );
+
+    // Récupérer les notifications avec informations de l'expéditeur
+    const notificationsQuery = `
+      SELECT 
+        n.id,
+        n.notification_type,
+        n.content,
+        n.link,
+        n.priority,
+        n.is_read,
+        n.read_at,
+        n.created_at,
+        COALESCE(sender.first_name || ' ' || sender.last_name, 'Système') as sender_name,
+        COALESCE(sender.role, 'system') as sender_role
+      FROM notifications n
+      LEFT JOIN users sender ON n.sender_id = sender.id
+      WHERE n.user_id = $1
+      ORDER BY n.created_at DESC
+      LIMIT 100
+    `;
+
+    const notificationsResult = await pool.query(notificationsQuery, [userId]);
+
+    console.log("🔔 [NOTIFICATIONS] Résultat requête SQL:", {
+      userId: userId,
+      foundNotifications: notificationsResult.rows.length,
+      notifications: notificationsResult.rows,
+    });
+
+    // Compter le total et les non-lues
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_count,
+        COUNT(CASE WHEN is_read = false THEN 1 END) as unread_count
+      FROM notifications
+      WHERE user_id = $1
+    `;
+
+    const statsResult = await pool.query(statsQuery, [userId]);
+    const stats = statsResult.rows[0];
+
+    res.json({
+      success: true,
+      data: {
+        notifications: notificationsResult.rows,
+        unread_count: parseInt(stats.unread_count),
+        total_count: parseInt(stats.total_count),
+      },
+    });
+  } catch (error) {
+    console.error("❌ [NOTIFICATIONS] Erreur récupération:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors de la récupération des notifications",
+      message: error.message,
+    });
+  }
+});
+
+// POST /api/notifications - Créer une nouvelle notification
+app.post("/api/notifications", authenticateToken, async (req, res) => {
+  try {
+    const senderId = req.user.userId;
+    const {
+      user_id,
+      notification_type = "message",
+      content,
+      link,
+      priority = "normal",
+    } = req.body;
+
+    console.log(
+      "🔔 [NOTIFICATIONS] Création notification par:",
+      senderId,
+      "pour:",
+      user_id
+    );
+
+    // Validation des données
+    if (!user_id || !content) {
+      return res.status(400).json({
+        success: false,
+        error: "user_id et content sont requis",
+      });
+    }
+
+    // Vérifier que l'utilisateur destinataire existe
+    const userCheck = await pool.query("SELECT id FROM users WHERE id = $1", [
+      user_id,
+    ]);
+    if (userCheck.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Utilisateur destinataire non trouvé",
+      });
+    }
+
+    // Insérer la notification
+    const insertQuery = `
+      INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING id, created_at
+    `;
+
+    const result = await pool.query(insertQuery, [
+      user_id,
+      senderId,
+      notification_type,
+      content,
+      link,
+      priority,
+    ]);
+
+    const notification = result.rows[0];
+
+    // Récupérer la notification complète avec infos expéditeur
+    const fullNotificationQuery = `
+      SELECT 
+        n.id,
+        n.notification_type,
+        n.content,
+        n.link,
+        n.priority,
+        n.is_read,
+        n.read_at,
+        n.created_at,
+        COALESCE(sender.first_name || ' ' || sender.last_name, 'Système') as sender_name,
+        COALESCE(sender.role, 'system') as sender_role
+      FROM notifications n
+      LEFT JOIN users sender ON n.sender_id = sender.id
+      WHERE n.id = $1
+    `;
+
+    const fullResult = await pool.query(fullNotificationQuery, [
+      notification.id,
+    ]);
+
+    res.status(201).json({
+      success: true,
+      data: fullResult.rows[0],
+    });
+  } catch (error) {
+    console.error("❌ [NOTIFICATIONS] Erreur création:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors de la création de la notification",
+      message: error.message,
+    });
+  }
+});
+
+// PUT /api/notifications/:id/read - Marquer une notification comme lue
+app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
+  try {
+    const notificationId = parseInt(req.params.id);
+    const userId = req.user.userId;
+
+    console.log(
+      "🔔 [NOTIFICATIONS] Marquage lu notification:",
+      notificationId,
+      "par:",
+      userId
+    );
+
+    // Vérifier que la notification appartient à l'utilisateur
+    const checkQuery =
+      "SELECT id FROM notifications WHERE id = $1 AND user_id = $2";
+    const checkResult = await pool.query(checkQuery, [notificationId, userId]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Notification non trouvée ou accès non autorisé",
+      });
+    }
+
+    // Marquer comme lue
+    const updateQuery = `
+      UPDATE notifications 
+      SET is_read = true, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1 AND user_id = $2
+      RETURNING id, read_at
+    `;
+
+    const result = await pool.query(updateQuery, [notificationId, userId]);
+
+    res.json({
+      success: true,
+      data: {
+        id: result.rows[0].id,
+        read_at: result.rows[0].read_at,
+      },
+    });
+  } catch (error) {
+    console.error("❌ [NOTIFICATIONS] Erreur marquage lu:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors du marquage comme lu",
+      message: error.message,
+    });
+  }
+});
+
+// DELETE /api/notifications/:id - Supprimer une notification
+app.delete("/api/notifications/:id", authenticateToken, async (req, res) => {
+  try {
+    const notificationId = parseInt(req.params.id);
+    const userId = req.user.userId;
+
+    console.log(
+      "🔔 [NOTIFICATIONS] Suppression notification:",
+      notificationId,
+      "par:",
+      userId
+    );
+
+    // Vérifier que la notification appartient à l'utilisateur
+    const checkQuery =
+      "SELECT id FROM notifications WHERE id = $1 AND user_id = $2";
+    const checkResult = await pool.query(checkQuery, [notificationId, userId]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        error: "Notification non trouvée ou accès non autorisé",
+      });
+    }
+
+    // Supprimer la notification
+    const deleteQuery =
+      "DELETE FROM notifications WHERE id = $1 AND user_id = $2";
+    await pool.query(deleteQuery, [notificationId, userId]);
+
+    res.json({
+      success: true,
+      data: {
+        id: notificationId,
+        deleted: true,
+      },
+    });
+  } catch (error) {
+    console.error("❌ [NOTIFICATIONS] Erreur suppression:", error);
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors de la suppression",
+      message: error.message,
+    });
+  }
+});
+
+// ================================
 // 🏗️ ENDPOINT TEMPORAIRE: INITIALISATION TABLES ADMIN
 // ================================
 app.post(
@@ -1397,6 +1756,21 @@ app.post(
         feedback_comment TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
+
+        // Table notifications
+        `CREATE TABLE IF NOT EXISTS notifications (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        sender_id INTEGER REFERENCES users(id),
+        notification_type VARCHAR(50) DEFAULT 'message',
+        content TEXT NOT NULL,
+        link VARCHAR(255),
+        priority VARCHAR(20) DEFAULT 'normal',
+        is_read BOOLEAN DEFAULT FALSE,
+        read_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );`,
       ];
 
       // Créer les tables
@@ -1404,7 +1778,7 @@ app.post(
         await pool.query(query);
       }
 
-      // 2. Créer la vue admin_stats
+      // 2. Créer la vue admin_stats (temporairement sans notifications pour éviter problème permissions)
       await pool.query(`
       CREATE OR REPLACE VIEW admin_stats AS
       SELECT 
@@ -1483,6 +1857,39 @@ app.post(
       WHERE p.role = 'patient' AND d.role = 'dentist'
       AND NOT EXISTS (SELECT 1 FROM chat_conversations cc WHERE cc.patient_id = p.id)
       LIMIT 3;
+    `);
+
+      // Notifications de test
+      await pool.query(`
+      INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
+      SELECT 
+        p.id as user_id,
+        d.id as sender_id,
+        'appointment' as notification_type,
+        'Rappel : Votre rendez-vous de contrôle est prévu demain à 14h30. N''oubliez pas d''apporter votre carte vitale.' as content,
+        '/patient/appointments' as link,
+        'high' as priority
+      FROM users p
+      CROSS JOIN users d
+      WHERE p.role = 'patient' AND d.role = 'dentist'
+      AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = p.id)
+      LIMIT 2;
+    `);
+
+      await pool.query(`
+      INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
+      SELECT 
+        d.id as user_id,
+        p.id as sender_id,
+        'message' as notification_type,
+        'Nouveau message d''un patient concernant des douleurs post-opératoires.' as content,
+        '/dentist/messages' as link,
+        'normal' as priority
+      FROM users d
+      CROSS JOIN users p
+      WHERE d.role = 'dentist' AND p.role = 'patient'
+      AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = d.id AND n.notification_type = 'message')
+      LIMIT 1;
     `);
 
       // 5. Vérifier les stats finales

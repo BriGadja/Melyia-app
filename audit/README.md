@@ -57,7 +57,19 @@ audit/
 
 # Audit Melyia - Documentation Technique
 
-## 📋 DERNIÈRES MODIFICATIONS v27.0
+## 📋 DERNIÈRES MODIFICATIONS v28.0
+
+### 🔔 SYSTÈME NOTIFICATIONS OPÉRATIONNEL (2025-01-24) ⭐
+
+- **[INDEX-NOTIFICATIONS-COMPLET.md](./INDEX-NOTIFICATIONS-COMPLET.md)** : ⭐ **Index complet de toute la documentation notifications**
+- **changelog/2025-01-24-notifications-systeme-final-operationnel.md** : Documentation finale avec validation temps réel
+- **reference-rapide-notifications-frontend.md** : Guide rapide développeurs frontend
+- **Statut** : ✅ **SYSTÈME 100% OPÉRATIONNEL - LIVE**
+
+### 🧹 Session Complète Nettoyage + Optimisation (2025-01-24)
+
+- **changelog/2025-01-24-session-complete-nettoyage-optimisation.md** : ⭐ Documentation complète de la session de maintenance
+- **changelog/2025-01-24-correction-nettoyage-fichiers-deploiement.md** : Détails techniques des corrections
 
 ### 🚀 Scripts de Synchronisation Serveur (2025-01-24)
 
@@ -87,8 +99,11 @@ audit/
 
 ### Références Rapides /
 
+- `reference-rapide-deploiement.md` : 🚀 **NOUVEAU** Guide scripts de déploiement optimisés
 - `reference-rapide-synchronisation.md` : ⭐ Guide scripts de synchronisation
-- `application.md` : Overview général de l'application
+- `reference-rapide-optimisation-chatbot.md` : Optimisations chatbot v25.0
+- `reference-rapide-actions-serveur.md` : Commandes SSH serveur
+- `reference-rapide-es-modules-typescript.md` : Erreurs fréquentes et solutions
 
 ## 🎯 PROCÉDURE OBLIGATOIRE NOUVELLE SESSION
 
@@ -231,7 +246,7 @@ node test-api.mjs                  # Template ES Modules
 - **Dentiste** : `dentiste@melyia.com` / `test123`
 - **Patient** : `patient@melyia.com` / `test123`
 
-## 📊 MÉTRIQUES DE QUALITÉ
+## 📊 MÉTRIQUES DE QUALITÉ v28.0
 
 ### Infrastructure
 
@@ -253,6 +268,21 @@ node test-api.mjs                  # Template ES Modules
 - ✅ Tests automatisés avec comptes réels
 - ✅ Documentation complète et à jour
 - ✅ Workflow robuste établi
+
+### 🆕 Déploiement (v28.0)
+
+- ✅ **4 scripts optimisés** : fast, full, quick, combined
+- ✅ **Performance** : 11.7s (deploy:fast) | 2.7s (deploy:quick)
+- ✅ **Upload parallèle** : Landing + App simultané
+- ✅ **0 timeout** : Versions optimisées disponibles
+- ✅ **Gestion erreurs** : Robuste avec retry automatique
+
+### 🧹 Maintenance (v28.0)
+
+- ✅ **37+ fichiers temporaires** supprimés
+- ✅ **~150 MB** libérés
+- ✅ **Structure propre** : Racine organisée
+- ✅ **Scripts essentiels** : Restaurés et améliorés
 
 ## 🎯 PROCÉDURES ÉTABLIES
 
