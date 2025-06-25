@@ -151,216 +151,242 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Éléments de décoration en arrière-plan */}
+      <div className="absolute inset-0 z-0">
+        <div className="absolute top-10 right-10 w-80 h-80 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full opacity-20 blur-3xl animate-pulse"></div>
+        <div
+          className="absolute bottom-10 left-10 w-96 h-96 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full opacity-20 blur-3xl animate-pulse"
+          style={{ animationDelay: "3s" }}
+        ></div>
+        <div
+          className="absolute top-1/3 left-1/3 w-64 h-64 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full opacity-15 blur-3xl animate-pulse"
+          style={{ animationDelay: "6s" }}
+        ></div>
+      </div>
+
+      <Card className="w-full max-w-lg relative z-10 bg-white/80 backdrop-blur-md border-0 shadow-2xl rounded-3xl overflow-hidden">
+        <CardHeader className="text-center p-8 pb-6">
+          {/* Logo moderne */}
+          <div className="flex items-center justify-center mb-6">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-400 flex items-center justify-center shadow-2xl">
+              <span className="text-white text-3xl font-bold">M</span>
+            </div>
+          </div>
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent mb-2">
             Créer votre compte
           </CardTitle>
-          <CardDescription className="text-center">
+          <CardDescription className="text-gray-600 text-lg">
             Rejoignez Melyia pour une meilleure gestion dentaire
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-8 pt-0">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Sélecteur de rôle */}
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Je suis :</Label>
+            {/* Sélecteur de rôle modernisé */}
+            <div className="space-y-4">
+              <Label className="text-gray-700 font-semibold text-lg">
+                👤 Je suis :
+              </Label>
               <RadioGroup
                 value={role}
                 onValueChange={setRole}
-                className="flex gap-6"
+                className="grid grid-cols-2 gap-4"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="patient" id="patient" />
-                  <Label
-                    htmlFor="patient"
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <User size={16} />
-                    Patient
-                  </Label>
+                <div
+                  className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer ${
+                    role === "patient"
+                      ? "border-emerald-400 bg-gradient-to-r from-emerald-50 to-teal-50 shadow-lg"
+                      : "border-gray-200 hover:border-emerald-200 hover:shadow-md"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <RadioGroupItem
+                      value="patient"
+                      id="patient"
+                      className="text-emerald-500"
+                    />
+                    <Label
+                      htmlFor="patient"
+                      className="flex items-center gap-2 cursor-pointer font-medium"
+                    >
+                      <span className="text-2xl">👤</span>
+                      Patient
+                    </Label>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="dentist" id="dentist" />
-                  <Label
-                    htmlFor="dentist"
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <Stethoscope size={16} />
-                    Dentiste
-                  </Label>
+                <div
+                  className={`p-4 rounded-2xl border-2 transition-all duration-300 cursor-pointer ${
+                    role === "dentist"
+                      ? "border-blue-400 bg-gradient-to-r from-blue-50 to-cyan-50 shadow-lg"
+                      : "border-gray-200 hover:border-blue-200 hover:shadow-md"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <RadioGroupItem
+                      value="dentist"
+                      id="dentist"
+                      className="text-blue-500"
+                    />
+                    <Label
+                      htmlFor="dentist"
+                      className="flex items-center gap-2 cursor-pointer font-medium"
+                    >
+                      <span className="text-2xl">👨‍⚕️</span>
+                      Dentiste
+                    </Label>
+                  </div>
                 </div>
               </RadioGroup>
             </div>
 
             {/* Erreur générale */}
             {errors.general && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-md">
+              <div className="p-4 text-sm text-red-700 bg-red-50/80 backdrop-blur-sm border border-red-200 rounded-2xl">
                 {errors.general}
               </div>
             )}
 
-            {/* Email */}
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="votre@email.com"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    clearError("email");
-                  }}
-                  className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
-                />
-              </div>
-              {errors.email && (
-                <p className="text-sm text-red-600">{errors.email}</p>
-              )}
-            </div>
+            {/* Informations personnelles */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-700 border-b border-gray-200 pb-2">
+                📝 Informations personnelles
+              </h3>
 
-            {/* Mot de passe */}
-            <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    clearError("password");
-                  }}
-                  className={`pl-10 ${errors.password ? "border-red-500" : ""}`}
-                />
-              </div>
-              {errors.password && (
-                <p className="text-sm text-red-600">{errors.password}</p>
-              )}
-            </div>
-
-            {/* Confirmation mot de passe */}
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    clearError("confirmPassword");
-                  }}
-                  className={`pl-10 ${
-                    errors.confirmPassword ? "border-red-500" : ""
-                  }`}
-                />
-              </div>
-              {errors.confirmPassword && (
-                <p className="text-sm text-red-600">{errors.confirmPassword}</p>
-              )}
-            </div>
-
-            {/* Prénom et Nom */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">Prénom</Label>
-                <Input
-                  id="firstName"
-                  placeholder="Jean"
-                  value={firstName}
-                  onChange={(e) => {
-                    setFirstName(e.target.value);
-                    clearError("firstName");
-                  }}
-                  className={errors.firstName ? "border-red-500" : ""}
-                />
-                {errors.firstName && (
-                  <p className="text-sm text-red-600">{errors.firstName}</p>
-                )}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">Nom</Label>
-                <Input
-                  id="lastName"
-                  placeholder="Dupont"
-                  value={lastName}
-                  onChange={(e) => {
-                    setLastName(e.target.value);
-                    clearError("lastName");
-                  }}
-                  className={errors.lastName ? "border-red-500" : ""}
-                />
-                {errors.lastName && (
-                  <p className="text-sm text-red-600">{errors.lastName}</p>
-                )}
-              </div>
-            </div>
-
-            {/* Téléphone */}
-            <div className="space-y-2">
-              <Label htmlFor="phone">Téléphone (optionnel)</Label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="phone"
-                  type="tel"
-                  placeholder="+33 1 23 45 67 89"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-
-            {/* Champs spécifiques Patient */}
-            {role === "patient" && (
-              <div className="space-y-2">
-                <Label htmlFor="birthDate">Date de naissance (optionnel)</Label>
-                <div className="relative">
-                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="birthDate"
-                    type="date"
-                    value={birthDate}
-                    onChange={(e) => setBirthDate(e.target.value)}
-                    className="pl-10"
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="firstName"
+                    className="text-gray-700 font-medium"
+                  >
+                    Prénom *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="firstName"
+                      type="text"
+                      placeholder="Marie"
+                      value={firstName}
+                      onChange={(e) => {
+                        setFirstName(e.target.value);
+                        clearError("firstName");
+                      }}
+                      className="pl-10 py-3 rounded-2xl border-0 bg-white/70 backdrop-blur-sm shadow-md focus:shadow-lg focus:bg-white transition-all duration-300"
+                    />
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      👤
+                    </div>
+                  </div>
+                  {errors.firstName && (
+                    <p className="text-red-600 text-sm">{errors.firstName}</p>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* Champs spécifiques Dentiste */}
-            {role === "dentist" && (
-              <div className="space-y-4 p-4 bg-blue-50 rounded-lg">
-                <h3 className="font-medium text-blue-900 flex items-center gap-2">
-                  <Building size={16} />
-                  Informations du cabinet
-                </h3>
 
                 <div className="space-y-2">
-                  <Label htmlFor="practiceName">Nom du cabinet</Label>
+                  <Label
+                    htmlFor="lastName"
+                    className="text-gray-700 font-medium"
+                  >
+                    Nom *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="lastName"
+                      type="text"
+                      placeholder="Dupont"
+                      value={lastName}
+                      onChange={(e) => {
+                        setLastName(e.target.value);
+                        clearError("lastName");
+                      }}
+                      className="pl-10 py-3 rounded-2xl border-0 bg-white/70 backdrop-blur-sm shadow-md focus:shadow-lg focus:bg-white transition-all duration-300"
+                    />
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      📛
+                    </div>
+                  </div>
+                  {errors.lastName && (
+                    <p className="text-red-600 text-sm">{errors.lastName}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-700 font-medium">
+                  Email *
+                </Label>
+                <div className="relative">
                   <Input
-                    id="practiceName"
-                    placeholder="Cabinet Dentaire Dr. Dupont"
-                    value={practiceName}
+                    id="email"
+                    type="email"
+                    placeholder="marie.dupont@exemple.com"
+                    value={email}
                     onChange={(e) => {
-                      setPracticeName(e.target.value);
-                      clearError("practiceName");
+                      setEmail(e.target.value);
+                      clearError("email");
                     }}
-                    className={errors.practiceName ? "border-red-500" : ""}
+                    className="pl-10 py-3 rounded-2xl border-0 bg-white/70 backdrop-blur-sm shadow-md focus:shadow-lg focus:bg-white transition-all duration-300"
                   />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    ✉️
+                  </div>
+                </div>
+                {errors.email && (
+                  <p className="text-red-600 text-sm">{errors.email}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="text-gray-700 font-medium">
+                  Téléphone
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="phone"
+                    type="tel"
+                    placeholder="06 12 34 56 78"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="pl-10 py-3 rounded-2xl border-0 bg-white/70 backdrop-blur-sm shadow-md focus:shadow-lg focus:bg-white transition-all duration-300"
+                  />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    📞
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Informations spécifiques au rôle */}
+            {role === "dentist" && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-700 border-b border-gray-200 pb-2">
+                  🏥 Informations du cabinet
+                </h3>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="practiceName"
+                    className="text-gray-700 font-medium"
+                  >
+                    Nom du cabinet *
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="practiceName"
+                      type="text"
+                      placeholder="Cabinet Dentaire Dr. Dupont"
+                      value={practiceName}
+                      onChange={(e) => {
+                        setPracticeName(e.target.value);
+                        clearError("practiceName");
+                      }}
+                      className="pl-10 py-3 rounded-2xl border-0 bg-white/70 backdrop-blur-sm shadow-md focus:shadow-lg focus:bg-white transition-all duration-300"
+                    />
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      🏥
+                    </div>
+                  </div>
                   {errors.practiceName && (
-                    <p className="text-sm text-red-600">
+                    <p className="text-red-600 text-sm">
                       {errors.practiceName}
                     </p>
                   )}
@@ -368,32 +394,133 @@ export default function Register() {
               </div>
             )}
 
-            {/* Bouton de soumission */}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? (
-                <div className="flex items-center gap-2">
-                  <LoadingSpinner />
-                  Inscription en cours...
+            {role === "patient" && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-700 border-b border-gray-200 pb-2">
+                  📅 Informations patient
+                </h3>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="birthDate"
+                    className="text-gray-700 font-medium"
+                  >
+                    Date de naissance
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="birthDate"
+                      type="date"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
+                      className="pl-10 py-3 rounded-2xl border-0 bg-white/70 backdrop-blur-sm shadow-md focus:shadow-lg focus:bg-white transition-all duration-300"
+                    />
+                    <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                      📅
+                    </div>
+                  </div>
                 </div>
+              </div>
+            )}
+
+            {/* Sécurité */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-700 border-b border-gray-200 pb-2">
+                🔒 Sécurité
+              </h3>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-700 font-medium">
+                  Mot de passe *
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      clearError("password");
+                    }}
+                    className="pl-10 py-3 rounded-2xl border-0 bg-white/70 backdrop-blur-sm shadow-md focus:shadow-lg focus:bg-white transition-all duration-300"
+                  />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    🔒
+                  </div>
+                </div>
+                {errors.password && (
+                  <p className="text-red-600 text-sm">{errors.password}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="confirmPassword"
+                  className="text-gray-700 font-medium"
+                >
+                  Confirmer le mot de passe *
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => {
+                      setConfirmPassword(e.target.value);
+                      clearError("confirmPassword");
+                    }}
+                    className="pl-10 py-3 rounded-2xl border-0 bg-white/70 backdrop-blur-sm shadow-md focus:shadow-lg focus:bg-white transition-all duration-300"
+                  />
+                  <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    🔐
+                  </div>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="text-red-600 text-sm">
+                    {errors.confirmPassword}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-600 hover:to-teal-500 text-white text-lg font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+            >
+              {isLoading ? (
+                <>
+                  <LoadingSpinner size="sm" className="mr-3" />
+                  Création du compte...
+                </>
               ) : (
-                "Créer mon compte"
+                <>🚀 Créer mon compte</>
               )}
             </Button>
-
-            {/* Lien vers login */}
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-                Déjà un compte ?{" "}
-                <button
-                  type="button"
-                  onClick={() => setLocation("/login")}
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  Se connecter
-                </button>
-              </p>
-            </div>
           </form>
+
+          {/* Lien vers connexion */}
+          <div className="text-center pt-6">
+            <p className="text-gray-600">
+              Déjà un compte ?{" "}
+              <Button
+                variant="link"
+                onClick={() => setLocation("/login")}
+                className="text-emerald-600 hover:text-emerald-700 font-semibold p-0 h-auto"
+                disabled={isLoading}
+              >
+                Se connecter →
+              </Button>
+            </p>
+          </div>
+
+          {/* Informations de version */}
+          <div className="text-center pt-4 border-t border-gray-200/50">
+            <p className="text-xs text-gray-500">
+              Melyia v2.0 • Plateforme dentaire sécurisée
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

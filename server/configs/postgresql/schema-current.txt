@@ -1,13 +1,15 @@
-﻿ schemaname |     tablename      | tableowner 
-------------+--------------------+------------
+﻿ schemaname |     tablename      | tableowner  
+------------+--------------------+-------------
  public     | admin_profiles     | postgres
  public     | chat_conversations | postgres
  public     | dentist_profiles   | postgres
+ public     | llm_settings       | postgres
+ public     | notifications      | melyia_user
  public     | patient_documents  | postgres
  public     | patient_profiles   | postgres
  public     | users              | postgres
  public     | waitlist           | postgres
-(7 rows)
+(9 rows)
 
      table_name     |       column_name       |          data_type          | is_nullable 
 --------------------+-------------------------+-----------------------------+-------------
@@ -45,6 +47,30 @@
  dentist_profiles   | subscription_type       | character varying           | YES
  dentist_profiles   | max_patients            | integer                     | YES
  dentist_profiles   | created_at              | timestamp without time zone | YES
+ llm_settings       | id                      | integer                     | NO
+ llm_settings       | system_prompt           | text                        | YES
+ llm_settings       | system_prompt_urgence   | text                        | YES
+ llm_settings       | temperature             | double precision            | YES
+ llm_settings       | top_p                   | double precision            | YES
+ llm_settings       | max_tokens              | integer                     | YES
+ llm_settings       | num_ctx                 | integer                     | YES
+ llm_settings       | stop_sequences          | ARRAY                       | YES
+ llm_settings       | keep_alive_minutes      | integer                     | YES
+ llm_settings       | timeout_seconds         | integer                     | YES
+ llm_settings       | model_name              | character varying           | YES
+ llm_settings       | created_at              | timestamp without time zone | YES
+ llm_settings       | updated_at              | timestamp without time zone | YES
+ notifications      | id                      | integer                     | NO
+ notifications      | user_id                 | integer                     | YES
+ notifications      | sender_id               | integer                     | YES
+ notifications      | notification_type       | character varying           | YES
+ notifications      | content                 | text                        | NO
+ notifications      | link                    | character varying           | YES
+ notifications      | priority                | character varying           | YES
+ notifications      | is_read                 | boolean                     | YES
+ notifications      | read_at                 | timestamp without time zone | YES
+ notifications      | created_at              | timestamp without time zone | YES
+ notifications      | updated_at              | timestamp without time zone | YES
  patient_documents  | id                      | integer                     | NO
  patient_documents  | patient_id              | integer                     | YES
  patient_documents  | dentist_id              | integer                     | YES
@@ -88,5 +114,5 @@
  waitlist           | practice_name           | character varying           | YES
  waitlist           | comments                | text                        | YES
  waitlist           | created_at              | timestamp without time zone | YES
-(77 rows)
+(101 rows)
 

@@ -19,8 +19,12 @@
     "test": "echo 'Tests - TODO: setup Vitest'",
     "ci:deploy": "npm run build && npm run deploy:landing && npm run deploy:app",
     "build:both": "npm run build:landing && npm run build:app",
-    "deploy:full": "npm run build:both && npm run deploy:combined",
+    "deploy:full": "npm run build:both && npm run deploy:smart",
+    "deploy:fast": "npm run build:both && npm run deploy:quick",
+    "deploy:ultra": "npm run build:app && node deploy-ultra-fast.js",
     "deploy:combined": "node deploy-combined.js",
+    "deploy:smart": "node deploy-smart.js",
+    "deploy:quick": "node deploy-combined-quick.js",
     "test:deploy": "echo 'Test connectivité...' && curl -I https://dev.melyia.com && curl -I https://app-dev.melyia.com"
   },
   "dependencies": {

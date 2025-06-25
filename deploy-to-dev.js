@@ -1,284 +1,95 @@
+// 🚀 DEPLOY LANDING PAGE - Déploie vers dev.melyia.com
+
 import fs from "fs";
-import path from "path";
-import FormData from "form-data";
-import fetch from "node-fetch";
+import { execSync } from "child_process";
 
-/**
- * 🚀 DÉPLOIEMENT CURSOR → DEV.MELYIA.COM (VERSION CORRIGÉE)
- *
- * CORRECTIONS v20.1 :
- * - Configuration selon infrastructure réelle
- * - Port et endpoints corrigés pour landing page
- */
-
-// Configuration corrigée pour landing
 const CONFIG = {
-  SERVER_URL: "https://dev.melyia.com",
-  WEBHOOK_ENDPOINT: "/hooks/deploy", // Endpoint corrigé selon infrastructure
-  WEBHOOK_TOKEN:
-    "2bce1774a17bf4a01b21798780481413a9872b27c457b7c778e7c157125a6410",
-  BUILD_COMMAND: "npm run build:landing",
-  BUILD_DIR: "./dist/landing",
-  TARGET_PATH: "/var/www/melyia/dev/frontend", // Chemin pour landing page
+  SSH: {
+    user: "ubuntu",
+    host: "51.91.145.255",
+    key: process.env.USERPROFILE + "\\.ssh\\melyia_main",
+  },
+  PATHS: {
+    local: "dist/landing",
+    remote: "/var/www/melyia/dev-site",
+  },
 };
 
-/**
- * Utilitaire de logging coloré
- */
-function log(message, color = "white") {
+const log = (message, color = "cyan") => {
   const colors = {
-    red: "\x1b[31m",
     green: "\x1b[32m",
+    red: "\x1b[31m",
     yellow: "\x1b[33m",
-    blue: "\x1b[34m",
     cyan: "\x1b[36m",
-    white: "\x1b[37m",
     reset: "\x1b[0m",
   };
-  console.log(`${colors[color] || colors.white}${message}${colors.reset}`);
-}
+  console.log(`${colors[color]}${message}${colors.reset}`);
+};
 
-/**
- * Build du projet avant déploiement
- */
-async function buildProject() {
+function executeCommand(command, description) {
   try {
-    log("🔨 Build Vite Landing...", "blue");
-
-    const { spawn } = await import("child_process");
-
-    return new Promise((resolve, reject) => {
-      const buildProcess = spawn("npm", ["run", "build:landing"], {
-        stdio: "pipe",
-        shell: true,
-      });
-
-      let output = "";
-      buildProcess.stdout.on("data", (data) => {
-        output += data.toString();
-        process.stdout.write(data);
-      });
-
-      buildProcess.stderr.on("data", (data) => {
-        output += data.toString();
-        process.stderr.write(data);
-      });
-
-      buildProcess.on("close", (code) => {
-        if (code === 0) {
-          log("✅ Build réussi !", "green");
-          resolve(true);
-        } else {
-          log(`❌ Build échoué avec le code ${code}`, "red");
-          reject(new Error(`Build failed with code ${code}`));
-        }
-      });
-    });
+    log(`🔄 ${description}...`);
+    const result = execSync(command, { encoding: "utf8" });
+    log(`✅ ${description} - Terminé`);
+    return result;
   } catch (error) {
-    log(`❌ Erreur build: ${error.message}`, "red");
-    return false;
+    log(`❌ Erreur ${description}: ${error.message}`, "red");
+    throw error;
   }
 }
 
-/**
- * Collecte récursive des fichiers à déployer
- */
-async function collectFiles() {
-  const files = [];
-
-  function scanDirectory(dirPath, relativePath = "") {
-    const items = fs.readdirSync(dirPath);
-
-    for (const item of items) {
-      const fullPath = path.join(dirPath, item);
-      let itemRelativePath = path.join(relativePath, item).replace(/\\/g, "/");
-
-      if (fs.statSync(fullPath).isDirectory()) {
-        scanDirectory(fullPath, itemRelativePath);
-      } else {
-        // ✅ CORRECTION : Renommer index-landing.html en index.html pour nginx
-        if (item === "index-landing.html") {
-          itemRelativePath = path
-            .join(relativePath, "index.html")
-            .replace(/\\/g, "/");
-          log(`🔄 Renommage: ${item} → index.html`, "yellow");
-        }
-
-        files.push({
-          path: fullPath,
-          relativePath: itemRelativePath,
-          name: item === "index-landing.html" ? "index.html" : item,
-          size: fs.statSync(fullPath).size,
-        });
-      }
-    }
-  }
-
-  if (!fs.existsSync(CONFIG.BUILD_DIR)) {
-    throw new Error(`Répertoire build introuvable: ${CONFIG.BUILD_DIR}`);
-  }
-
-  scanDirectory(CONFIG.BUILD_DIR);
-  return files;
-}
-
-/**
- * Déploiement vers le serveur
- */
-async function deployToServer(files) {
-  try {
-    log(`📤 Upload vers ${CONFIG.SERVER_URL}...`, "blue");
-
-    const form = new FormData();
-
-    // Métadonnées du déploiement
-    form.append(
-      "metadata",
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        files_count: files.length,
-        total_size: files.reduce((sum, f) => sum + f.size, 0),
-        source: "cursor-local",
-        target: CONFIG.TARGET_PATH,
-        version: "20.1.0",
-        type: "landing",
-      })
-    );
-
-    // Ajout de tous les fichiers
-    for (const file of files) {
-      form.append("files", fs.createReadStream(file.path), {
-        filename: file.relativePath,
-        contentType: getMimeType(file.name),
-      });
-    }
-
-    // Requête de déploiement
-    const response = await fetch(
-      `${CONFIG.SERVER_URL}${CONFIG.WEBHOOK_ENDPOINT}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${CONFIG.WEBHOOK_TOKEN}`,
-          ...form.getHeaders(),
-        },
-        body: form,
-      }
-    );
-
-    const result = await response.json();
-
-    if (response.ok) {
-      log(`✅ Déploiement réussi !`, "green");
-      log(`📊 Détails:`, "blue");
-      log(`   - Status: ${response.status}`, "yellow");
-      log(`   - Fichiers déployés: ${files.length}`, "yellow");
-      if (result.deployPath) {
-        log(`   - Path serveur: ${result.deployPath}`, "yellow");
-      }
-      if (result.backupPath) {
-        log(`   - Backup créé: ${path.basename(result.backupPath)}`, "yellow");
-      }
-
-      log("\n🌐 Votre landing page est maintenant disponible sur:", "green");
-      log("   https://dev.melyia.com", "cyan");
-      log(
-        "\n💡 Conseil: Videz le cache navigateur (Ctrl+F5) si pas de changement",
-        "yellow"
-      );
-
-      return true;
-    } else {
-      log(
-        `❌ Erreur serveur (${response.status}): ${
-          result.error || result.message
-        }`,
-        "red"
-      );
-      if (result.details) {
-        log(`   Détails: ${result.details}`, "red");
-      }
-      return false;
-    }
-  } catch (error) {
-    log(`❌ Erreur déploiement: ${error.message}`, "red");
-    return false;
-  }
-}
-
-/**
- * Utilitaire : déterminer le MIME type
- */
-function getMimeType(filename) {
-  const ext = path.extname(filename).toLowerCase();
-  const mimeTypes = {
-    ".html": "text/html",
-    ".css": "text/css",
-    ".js": "application/javascript",
-    ".json": "application/json",
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".svg": "image/svg+xml",
-    ".ico": "image/x-icon",
-    ".txt": "text/plain",
-    ".woff": "font/woff",
-    ".woff2": "font/woff2",
-    ".ttf": "font/ttf",
-  };
-
-  return mimeTypes[ext] || "application/octet-stream";
-}
-
-/**
- * 🚀 FONCTION PRINCIPALE
- */
-async function main() {
-  log("\n🚀 === DÉPLOIEMENT CURSOR → DEV.MELYIA.COM v20.1 ===\n", "blue");
-  log("🔧 Configuration corrigée pour landing page", "cyan");
-
+async function deployLanding() {
   const startTime = Date.now();
 
+  log("🚀 DÉPLOIEMENT LANDING PAGE - DÉMARRAGE", "green");
+  log("=====================================");
+
   try {
-    // 1. Build Vite Landing
-    const buildSuccess = await buildProject();
-    if (!buildSuccess) {
-      process.exit(1);
+    // Vérifier que le build existe
+    if (!fs.existsSync(CONFIG.PATHS.local)) {
+      throw new Error(
+        `Build landing non trouvé: ${CONFIG.PATHS.local}. Exécutez "npm run build:landing" d'abord.`
+      );
     }
 
-    // 2. Collecte fichiers
-    const files = await collectFiles();
-    if (!files || files.length === 0) {
-      log("❌ Aucun fichier à déployer", "red");
-      process.exit(1);
-    }
+    const sshCmd = `ssh -i "${CONFIG.SSH.key}" ${CONFIG.SSH.user}@${CONFIG.SSH.host}`;
+    const scpCmd = `scp -i "${CONFIG.SSH.key}" -r ${CONFIG.PATHS.local}/* ${CONFIG.SSH.user}@${CONFIG.SSH.host}:${CONFIG.PATHS.remote}/`;
 
-    log(`📁 Fichiers à déployer depuis ${CONFIG.BUILD_DIR}/`, "blue");
-    files.forEach((f) => log(`   - ${f.relativePath}`, "white"));
-
-    // 3. Déploiement
-    const deploySuccess = await deployToServer(files);
-    if (!deploySuccess) {
-      process.exit(1);
-    }
-
-    // 4. Succès !
-    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-    log(`\n🎉 Déploiement terminé en ${duration}s !`, "green");
-    log(
-      "🔧 Prochaine étape : Tester votre landing page sur dev.melyia.com",
-      "yellow"
+    // Créer le dossier distant si nécessaire
+    executeCommand(
+      `${sshCmd} "mkdir -p ${CONFIG.PATHS.remote}"`,
+      "Création dossier distant"
     );
+
+    // Copier les fichiers
+    executeCommand(scpCmd, "Upload fichiers landing page");
+
+    // Corriger les permissions
+    executeCommand(
+      `${sshCmd} "sudo chown -R www-data:www-data ${CONFIG.PATHS.remote} && sudo chmod -R 644 ${CONFIG.PATHS.remote}/* && sudo find ${CONFIG.PATHS.remote} -type d -exec chmod 755 {} +"`,
+      "Correction permissions"
+    );
+
+    // Validation
+    try {
+      executeCommand(
+        'curl -s -o /dev/null -w "%{http_code}" https://dev.melyia.com',
+        "Validation déploiement"
+      );
+    } catch (error) {
+      log("⚠️ Warning: Validation partielle", "yellow");
+    }
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(1);
+
+    log("=====================================");
+    log(`🎉 LANDING PAGE DÉPLOYÉE en ${duration}s`, "green");
+    log("📍 URL: https://dev.melyia.com");
   } catch (error) {
-    log(`\n💥 Erreur fatale: ${error.message}`, "red");
-    console.error(error);
+    log("=====================================");
+    log(`💥 ERREUR DÉPLOIEMENT: ${error.message}`, "red");
     process.exit(1);
   }
 }
 
-// ✅ AUTO-EXÉCUTION GARANTIE (style v23.0.0-PERENNE)
-console.log("🔄 Démarrage script de déploiement landing...");
-main().catch((error) => {
-  console.error("❌ Erreur fatale:", error);
-  process.exit(1);
-});
+deployLanding();

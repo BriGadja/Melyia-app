@@ -1,4 +1,120 @@
-﻿# PROJET MELYIA - Full Stack avec Vision Complète v25.0
+﻿# PROJET MELYIA - MÉTHODOLOGIE DE DÉVELOPPEMENT OBLIGATOIRE v30.1
+
+## 🎯 MÉTHODOLOGIE PAR MICRO-INCRÉMENTS - RÈGLE FONDAMENTALE
+
+**APPROCHE OBLIGATOIRE** : Cette méthodologie DOIT être suivie pour TOUS les travaux futurs sur le projet Melyia.
+
+### 📋 WORKFLOW OBLIGATOIRE POUR CHAQUE TÂCHE
+
+#### 1. **PRÉPARATION SYSTÉMATIQUE**
+
+```powershell
+# ✅ TOUJOURS commencer par synchroniser les données serveur
+.\dev\sync-essential.ps1
+
+# ✅ Vérifier que les fichiers sont à jour
+# server.js > 40KB + schema-current.txt > 5KB + package.json présent
+```
+
+#### 2. **DÉCOUPAGE EN MICRO-ÉTAPES**
+
+- ✅ **Diviser chaque tâche** en micro-étapes de 15-30 minutes maximum
+- ✅ **Une seule fonctionnalité** par micro-étape
+- ✅ **Objectif mesurable** et testable pour chaque étape
+- ✅ **Validation indépendante** de chaque étape avant de passer à la suivante
+
+#### 3. **TESTS D'AUDIT AVANT MODIFICATIONS**
+
+```javascript
+// ✅ TOUJOURS créer un script de test AVANT les modifications
+// test-[fonctionnalite]-audit.mjs
+import axios from "axios";
+
+async function auditCurrentState() {
+  // Tester l'état actuel du système
+  // Identifier les points de référence
+  // Documenter le comportement existant
+}
+```
+
+#### 4. **DÉVELOPPEMENT INCRÉMENTAL**
+
+- ✅ **Modifications minimales** à chaque fois
+- ✅ **Un seul fichier** à la fois si possible
+- ✅ **Respect des conventions** ES Modules + camelCase + PowerShell
+- ✅ **Cohérence** interfaces TypeScript avec backend
+
+#### 5. **TESTS DE VALIDATION APRÈS MODIFICATIONS**
+
+```javascript
+// ✅ TOUJOURS créer un script de validation APRÈS les modifications
+// test-[fonctionnalite]-validation.mjs
+async function validateChanges() {
+  // Tester que les modifications fonctionnent
+  // Vérifier qu'aucune régression n'a été introduite
+  // Confirmer que l'objectif de la micro-étape est atteint
+}
+```
+
+#### 6. **DOCUMENTATION ET NETTOYAGE**
+
+- ✅ **Documenter** les changements dans `audit/changelog/`
+- ✅ **Supprimer** les fichiers de test temporaires
+- ✅ **Résumer** les résultats obtenus
+- ✅ **Préparer** la micro-étape suivante
+
+### 🎮 EXEMPLE CONCRET - Projet Configuration LLM
+
+**Micro-étape 1** : Base de données
+
+- Audit : Vérifier structure BDD actuelle
+- Modification : Ajouter table `llm_settings`
+- Validation : Confirmer table créée + 12 colonnes
+
+**Micro-étape 2** : Routes API backend
+
+- Audit : Tester APIs admin existantes
+- Modification : Ajouter GET/PUT `/api/admin/llm-config`
+- Validation : Confirmer APIs sécurisées + réponses correctes
+
+**Micro-étape 3** : Intégration dynamique chatbot
+
+- Audit : Mesurer performance chatbot actuelle
+- Modification : Remplacer config hardcodée par BDD
+- Validation : Confirmer 370-395ms + config dynamique
+
+**Micro-étape 4** : Interface admin frontend
+
+- Audit : Identifier erreurs React existantes
+- Modification : Corriger hooks + ajouter interface
+- Validation : Confirmer interface fonctionnelle + sauvegarde temps réel
+
+### 🏆 AVANTAGES PROUVÉS DE CETTE MÉTHODOLOGIE
+
+- ✅ **Zéro régression** : Tests avant/après garantissent la stabilité
+- ✅ **Progression mesurable** : Chaque étape apporte une valeur concrète
+- ✅ **Debugging facile** : Problèmes isolés à une micro-étape spécifique
+- ✅ **Satisfaction continue** : Résultats visibles à chaque étape
+- ✅ **Maintenance simplifiée** : Changements documentés et testés
+
+### 🚫 INTERDICTIONS STRICTES
+
+- ❌ **PAS de modifications** sans tests d'audit préalables
+- ❌ **PAS de gros changements** en une seule fois
+- ❌ **PAS de suppositions** sur l'état du système
+- ❌ **PAS de fichiers temporaires** laissés dans le projet
+- ❌ **PAS de déploiement** sans validation complète
+
+### 📊 MÉTRIQUES DE SUCCÈS
+
+- **Taux de régression** : 0%
+- **Temps par micro-étape** : 15-30 minutes
+- **Tests de validation** : 100% passés
+- **Documentation** : Obligatoire pour chaque modification
+
+---
+
+# PROJET MELYIA - Full Stack avec Vision Complète v25.0
 
 ## ARCHITECTURE COMPLÈTE DISPONIBLE
 

@@ -1,40 +1,39 @@
+// 🔄 SWITCH TO APP MODE - Bascule vers l'application
+
 import fs from "fs";
 import path from "path";
 
-const clientDir = path.join(process.cwd(), "client");
+const log = (message, color = "cyan") => {
+  const colors = {
+    green: "\x1b[32m",
+    yellow: "\x1b[33m",
+    cyan: "\x1b[36m",
+    reset: "\x1b[0m",
+  };
+  console.log(`${colors[color]}${message}${colors.reset}`);
+};
 
-try {
-  // Vérifier que index-app.html existe
-  const appIndexPath = path.join(clientDir, "index-app.html");
-  const mainIndexPath = path.join(clientDir, "index.html");
-  const landingTempPath = path.join(clientDir, "index-landing-temp.html");
+function switchToApp() {
+  const clientDir = "./client";
+  const indexApp = path.join(clientDir, "index-app.html");
+  const indexCurrent = path.join(clientDir, "index.html");
 
-  // Si index.html existe, le sauvegarder comme landing
-  if (fs.existsSync(mainIndexPath)) {
-    fs.renameSync(mainIndexPath, landingTempPath);
+  try {
+    // Vérifier que le fichier app existe
+    if (!fs.existsSync(indexApp)) {
+      throw new Error("Fichier index-app.html non trouvé");
+    }
+
+    // Copier index-app.html vers index.html
+    fs.copyFileSync(indexApp, indexCurrent);
+
+    log("🔄 Basculé vers le mode APPLICATION", "green");
+    log("📍 Point d'entrée: index-app.html");
+    log('🚀 Exécutez "npm run dev" pour démarrer');
+  } catch (error) {
+    log(`❌ Erreur: ${error.message}`, "red");
+    process.exit(1);
   }
-
-  // Si index-app.html existe, le copier comme index.html
-  if (fs.existsSync(appIndexPath)) {
-    fs.copyFileSync(appIndexPath, mainIndexPath);
-  } else {
-    // Créer index.html pour app si il n'existe pas
-    const appHtml = `<!DOCTYPE html>
-<html>
-  <head>
-    <title>Melyia - Application Dentaire</title>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/app/main.tsx"></script>
-  </body>
-</html>`;
-    fs.writeFileSync(mainIndexPath, appHtml);
-  }
-
-  console.log("✅ Switched to APP mode");
-} catch (error) {
-  console.error("❌ Erreur switch app:", error.message);
 }
+
+switchToApp();

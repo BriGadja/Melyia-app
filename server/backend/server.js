@@ -199,147 +199,28 @@ async function ensureOllamaReady() {
     );
 
     console.log("⚡ Ollama ready (mode rapide) - Modèle chargé et optimisé");
-    return { status: "warm", responseTime: Date.now() };
+    return true;
   } catch (error) {
     console.log("⚠️ Ollama warming up:", error.message);
-    return { status: "cold", error: error.message };
+    return false;
   }
 }
 
-// ✅ NOUVEAU : SERVICE WARM-UP PROACTIF POUR CHATBOT
-async function warmupChatbotForUser(userId) {
-  try {
-    console.log(`🔥 [WARMUP] Démarrage warm-up chatbot pour user: ${userId}`);
-    const startTime = Date.now();
-
-    // 1. Vérifier état actuel d'Ollama
-    const currentStatus = await ensureOllamaReady();
-
-    if (currentStatus.status === "warm") {
-      console.log(
-        `⚡ [WARMUP] Ollama déjà chaud - Prêt instantanément pour user: ${userId}`
-      );
-      return {
-        status: "ready",
-        warmupTime: Date.now() - startTime,
-        isInstant: true,
-        message: "Chatbot prêt instantanément !",
-      };
-    }
-
-    // 2. Si froid, faire un warm-up intelligent avec timeout adaptatif
-    console.log(
-      `🔄 [WARMUP] Modèle froid - Initialisation pour user: ${userId}`
-    );
-
-    const warmupResponse = await axios.post(
-      "http://127.0.0.1:11434/api/generate",
-      {
-        model: "llama3.2:3b",
-        prompt: "Bonjour, je suis votre assistant médical. Prêt à vous aider.",
-        stream: false,
-        keep_alive: "45m", // ✅ OPTIMISÉ : 45min pour éviter le rechargement
-        options: {
-          temperature: 0.2,
-          top_p: 0.8,
-          num_predict: 30, // ✅ RÉDUIT : 30 tokens seulement pour warm-up
-          num_ctx: 512, // ✅ RÉDUIT : contexte minimal pour warm-up
-          stop: ["\n"], // ✅ AJOUTÉ : stop token pour accélérer
-        },
-      },
-      {
-        timeout: 25000, // ✅ AUGMENTÉ : 25s timeout pour chargement initial
-      }
-    );
-
-    const warmupTime = Date.now() - startTime;
-    console.log(`✅ [WARMUP] Succès en ${warmupTime}ms pour user: ${userId}`);
-
-    return {
-      status: "ready",
-      warmupTime,
-      isInstant: false,
-      message: `Chatbot initialisé en ${Math.round(warmupTime / 1000)}s !`,
-    };
-  } catch (error) {
-    const warmupTime = Date.now() - startTime;
-    console.error(
-      `❌ [WARMUP] Erreur pour user: ${userId} après ${warmupTime}ms:`,
-      error.message
-    );
-
-    // ✅ NOUVEAU : Gestion d'erreur intelligente
-    if (error.code === "ECONNABORTED" || warmupTime > 20000) {
-      return {
-        status: "warming",
-        warmupTime,
-        isInstant: false,
-        message: `Initialisation en cours (${Math.round(
-          warmupTime / 1000
-        )}s)... Le chatbot sera prêt sous peu.`,
-        retry: true,
-      };
-    }
-
-    return {
-      status: "error",
-      warmupTime,
-      isInstant: false,
-      message:
-        "Service IA temporairement indisponible. Réessayez dans quelques instants.",
-      error: error.message,
-    };
+// ✅ Initialisation avec retry intelligent
+async function initOllamaWithRetry() {
+  for (let i = 0; i < 3; i++) {
+    const success = await ensureOllamaReady();
+    if (success) break;
+    console.log(`🔄 Retry Ollama init ${i + 1}/3...`);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 }
 
-// ✅ NOUVEAU : ENDPOINT WARM-UP CHATBOT
-app.post("/api/chat/warmup", authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    console.log(`🚀 [WARMUP] Demande warm-up de user: ${userId}`);
+// Initialisation optimisée au démarrage
+initOllamaWithRetry();
 
-    const warmupResult = await warmupChatbotForUser(userId);
-
-    res.json({
-      success: true,
-      ...warmupResult,
-      userId: userId,
-      timestamp: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error("❌ [WARMUP] Erreur endpoint:", error);
-    res.status(500).json({
-      success: false,
-      status: "error",
-      message: "Erreur lors de l'initialisation du chatbot",
-      error: error.message,
-    });
-  }
-});
-
-// ✅ NOUVEAU : ENDPOINT STATUS CHATBOT TEMPS RÉEL
-app.get("/api/chat/status", authenticateToken, async (req, res) => {
-  try {
-    const status = await ensureOllamaReady();
-
-    res.json({
-      success: true,
-      status: status.status,
-      timestamp: new Date().toISOString(),
-      isReady: status.status === "warm",
-      message:
-        status.status === "warm"
-          ? "Chatbot prêt - Réponses rapides !"
-          : "Chatbot en cours d'initialisation...",
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      status: "error",
-      message: "Impossible de vérifier l'état du chatbot",
-    });
-  }
-});
+// ✅ Keep-alive plus fréquent mais plus léger (toutes les 15 minutes)
+setInterval(ensureOllamaReady, 15 * 60 * 1000);
 
 // ================================
 // ROUTES AUTHENTICATION
@@ -924,45 +805,85 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
             .join("\n")
         : "Pas de documents récents.";
 
-    // ✅ OPTIMISATION 4: Prompt système ULTRA-MINIMALISTE
+    // ✅ OPTIMISATION 4: Récupération configuration LLM complète (une seule requête)
+    const llmConfigResult = await pool.query(
+      "SELECT * FROM llm_settings LIMIT 1"
+    );
+    const llmConfig = llmConfigResult.rows[0];
+
+    if (!llmConfig) {
+      console.error("❌ [CHAT_ERROR] Configuration LLM non trouvée");
+      return res.status(500).json({
+        success: false,
+        error: "Configuration IA non disponible",
+        retry: false,
+      });
+    }
+
+    console.log(
+      `🤖 [LLM_CONFIG] Using dynamic config - Temp: ${llmConfig.temperature}, MaxTokens: ${llmConfig.max_tokens}, Model: ${llmConfig.model_name}`
+    );
+
+    // ✅ OPTIMISATION 5: Prompt système dynamique selon intention
     let systemPrompt = "";
     switch (intent) {
       case "urgence":
-        systemPrompt = `Assistant dentiste. Urgence.`;
+        systemPrompt =
+          llmConfig.system_prompt_urgence ||
+          `Assistant dentaire d'urgence français. Évalue et conseille rapidement.`;
         break;
       default:
-        systemPrompt = `Assistant dentiste.`;
+        systemPrompt =
+          llmConfig.system_prompt ||
+          `Assistant dentaire français. Réponds brièvement et clairement.`;
     }
 
-    // ✅ OPTIMISATION 5: Prompt final MINIMALISTE EXTRÊME
-    const fullPrompt = `${systemPrompt} ${message.substring(
-      0,
-      200
-    )} Réponse courte:`;
-
     console.log(
-      `🔄 [OLLAMA_FAST] Prompt size: ${fullPrompt.length} chars (vs ${fullPrompt.length} before)`
+      `📝 [PROMPT_CONFIG] Using ${intent} prompt: ${systemPrompt.substring(
+        0,
+        50
+      )}...`
     );
 
-    // ✅ OPTIMISATION 6: Appel Ollama ultra-optimisé
+    // ✅ OPTIMISATION 6: Prompt final ultra-compact
+    const fullPrompt = `${systemPrompt}
+
+DOSSIER: ${contextPrompt}
+
+QUESTION: ${message}
+
+Réponds en français, max 150 mots, précis et rassurant.
+
+RÉPONSE:`;
+
+    console.log(
+      `🔄 [OLLAMA_FAST] Prompt size: ${fullPrompt.length} chars (dynamic config loaded)`
+    );
+
+    // ✅ OPTIMISATION 7: Appel Ollama avec paramètres dynamiques
     try {
       const ollamaResponse = await axios.post(
         "http://127.0.0.1:11434/api/generate",
         {
-          model: "llama3.2:3b",
+          model: llmConfig.model_name || "llama3.2:3b",
           prompt: fullPrompt,
           stream: false,
-          keep_alive: "30m", // 🔑 CRITIQUE : Garde le modèle 30min au lieu de 24h
+          keep_alive: `${llmConfig.keep_alive_minutes || 30}m`,
           options: {
-            temperature: 0.1, // MINIMAL : Maximum déterminisme
-            top_p: 0.5, // TRÈS FOCALISÉ : Réponses plus directes
-            num_predict: 50, // MINIMAL : 50 tokens max (vs 200)
-            num_ctx: 256, // MINIMAL : Contexte ultra-réduit (vs 1024)
-            stop: ["\n", ".", "!", "?"], // ARRÊT RAPIDE : Première phrase
+            temperature: llmConfig.temperature || 0.2,
+            top_p: llmConfig.top_p || 0.8,
+            num_predict: llmConfig.max_tokens || 200,
+            num_ctx: llmConfig.num_ctx || 1024,
+            stop: llmConfig.stop_sequences || [
+              "\n\nQUESTION:",
+              "\n\nDOSSIER:",
+              "RÉPONSE:",
+              "\n---",
+            ],
           },
         },
         {
-          timeout: 45000, // 🔑 AUGMENTÉ : 45s timeout pour 1ère requête réelle
+          timeout: (llmConfig.timeout_seconds || 15) * 1000, // Conversion en millisecondes
         }
       );
 
@@ -1000,17 +921,23 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
         }
       });
 
-      // ✅ OPTIMISATION 8: Réponse structurée minimale
+      // ✅ OPTIMISATION 8: Réponse structurée minimale avec config dynamique
       res.json({
         success: true,
         response: aiResponse,
         metadata: {
           processingTime: `${processingTime}ms`,
           isLocal: true,
-          model: "llama3.2:3b",
-          architecture: "OLLAMA_FAST_MODE",
+          model: llmConfig.model_name || "llama3.2:3b",
+          architecture: "OLLAMA_DYNAMIC_CONFIG",
           documentsUsed: documents.length,
           intent: intent,
+          configUsed: {
+            temperature: llmConfig.temperature,
+            maxTokens: llmConfig.max_tokens,
+            keepAlive: `${llmConfig.keep_alive_minutes}m`,
+            timeout: `${llmConfig.timeout_seconds}s`,
+          },
         },
       });
     } catch (ollamaError) {
@@ -1053,6 +980,180 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
       success: false,
       error: "Erreur lors du traitement de la demande",
       isLocal: true,
+    });
+  }
+});
+
+// ===================================
+// ROUTES CHATBOT SUPPORT (v30.1)
+// ===================================
+
+// Route: Warm-up chatbot (initialisé par le frontend)
+app.post("/api/chat/warmup", authenticateToken, async (req, res) => {
+  try {
+    console.log(`🔥 [WARMUP] Demande warm-up par user: ${req.user.userId}`);
+    const startTime = Date.now();
+
+    // Vérifier état Ollama
+    const statusResponse = await axios.get(
+      "http://127.0.0.1:11434/api/version",
+      {
+        timeout: 3000,
+      }
+    );
+
+    if (statusResponse.status === 200) {
+      // Ollama accessible, faire un warm-up léger
+      try {
+        await axios.post(
+          "http://127.0.0.1:11434/api/generate",
+          {
+            model: "llama3.2:3b",
+            prompt: "OK",
+            stream: false,
+            keep_alive: "30m",
+            options: {
+              num_predict: 1,
+              temperature: 0.1,
+              num_ctx: 256,
+            },
+          },
+          { timeout: 15000 }
+        );
+
+        const warmupTime = Date.now() - startTime;
+        console.log(`✅ [WARMUP] Réussi en ${warmupTime}ms`);
+
+        res.json({
+          success: true,
+          status: "ready",
+          warmupTime,
+          isInstant: warmupTime < 2000,
+          message:
+            warmupTime < 2000
+              ? "Chatbot prêt instantanément !"
+              : `Chatbot initialisé en ${Math.round(warmupTime / 1000)}s`,
+          userId: req.user.userId,
+          timestamp: new Date().toISOString(),
+        });
+      } catch (ollamaError) {
+        console.log(`⚠️ [WARMUP] Ollama warming: ${ollamaError.message}`);
+
+        res.json({
+          success: true,
+          status: "warming",
+          warmupTime: Date.now() - startTime,
+          isInstant: false,
+          message: "Le modèle IA se prépare... Cela peut prendre 30 secondes.",
+          userId: req.user.userId,
+          timestamp: new Date().toISOString(),
+        });
+      }
+    } else {
+      throw new Error("Ollama non accessible");
+    }
+  } catch (error) {
+    console.error(`❌ [WARMUP] Erreur: ${error.message}`);
+
+    res.status(503).json({
+      success: false,
+      status: "error",
+      isInstant: false,
+      message: "Service IA temporairement indisponible",
+      error: error.message,
+      userId: req.user.userId,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Route: Status chatbot (vérification état temps réel)
+app.get("/api/chat/status", authenticateToken, async (req, res) => {
+  try {
+    console.log(
+      `📊 [STATUS] Vérification état chatbot par: ${req.user.userId}`
+    );
+
+    // Test rapide Ollama
+    const statusResponse = await axios.get(
+      "http://127.0.0.1:11434/api/version",
+      {
+        timeout: 2000,
+      }
+    );
+
+    // Test génération rapide pour vérifier si le modèle est chaud
+    const testResponse = await axios.post(
+      "http://127.0.0.1:11434/api/generate",
+      {
+        model: "llama3.2:3b",
+        prompt: "Test",
+        stream: false,
+        options: { num_predict: 1 },
+      },
+      { timeout: 3000 }
+    );
+
+    const isWarm = testResponse.data && testResponse.data.response;
+
+    res.json({
+      success: true,
+      status: isWarm ? "warm" : "cold",
+      isReady: isWarm,
+      message: isWarm
+        ? "Chatbot prêt - Réponses rapides"
+        : "Chatbot en veille - Nécessite warm-up",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error(`❌ [STATUS] Erreur: ${error.message}`);
+
+    res.json({
+      success: false,
+      status: "error",
+      isReady: false,
+      message: "Service IA indisponible",
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+// Route: Notifications (placeholder pour compatibilité frontend)
+app.get("/api/notifications", authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+
+    console.log(
+      `🔔 [NOTIFICATIONS] Récupération pour user: ${userId} (${userRole})`
+    );
+
+    // Pour l'instant, retourner des notifications fictives/système
+    const notifications = [
+      {
+        id: 1,
+        type: "system",
+        title: "Système de notifications",
+        message: "Le système de notifications sera bientôt disponible.",
+        read: false,
+        created_at: new Date().toISOString(),
+        priority: "info",
+      },
+    ];
+
+    res.json({
+      success: true,
+      notifications,
+      count: notifications.length,
+      unread: notifications.filter((n) => !n.read).length,
+    });
+  } catch (error) {
+    console.error(`❌ [NOTIFICATIONS] Erreur: ${error.message}`);
+
+    res.status(500).json({
+      success: false,
+      error: "Erreur lors de la récupération des notifications",
+      notifications: [],
     });
   }
 });
@@ -1315,363 +1416,250 @@ app.get(
 );
 
 // ================================
-// 🔔 ENDPOINT SPÉCIFIQUE: INITIALISATION TABLE NOTIFICATIONS
+// 🤖 ROUTES LLM CONFIGURATION (v30)
 // ================================
-app.post(
-  "/api/admin/init-notifications",
+
+// Route: Récupérer la configuration LLM actuelle
+app.get(
+  "/api/admin/llm-config",
   authenticateToken,
   requireAdmin,
   async (req, res) => {
     try {
       console.log(
-        "🔔 [ADMIN] Initialisation table notifications par:",
+        "🤖 [ADMIN] Récupération configuration LLM par:",
         req.user.email
       );
 
-      // Créer uniquement la table notifications
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS notifications (
-          id SERIAL PRIMARY KEY,
-          user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-          sender_id INTEGER REFERENCES users(id),
-          notification_type VARCHAR(50) DEFAULT 'message',
-          content TEXT NOT NULL,
-          link VARCHAR(255),
-          priority VARCHAR(20) DEFAULT 'normal',
-          is_read BOOLEAN DEFAULT FALSE,
-          read_at TIMESTAMP,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-      `);
-
-      // Insérer des données de test
-      await pool.query(`
-        INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
-        SELECT 
-          p.id as user_id,
-          d.id as sender_id,
-          'appointment' as notification_type,
-          'Rappel : Votre rendez-vous de contrôle est prévu demain à 14h30. N''oubliez pas d''apporter votre carte vitale.' as content,
-          '/patient/appointments' as link,
-          'high' as priority
-        FROM users p
-        CROSS JOIN users d
-        WHERE p.role = 'patient' AND d.role = 'dentist'
-        AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = p.id)
-        LIMIT 2;
-      `);
-
-      await pool.query(`
-        INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
-        SELECT 
-          d.id as user_id,
-          p.id as sender_id,
-          'message' as notification_type,
-          'Nouveau message d''un patient concernant des douleurs post-opératoires.' as content,
-          '/dentist/messages' as link,
-          'normal' as priority
-        FROM users d
-        CROSS JOIN users p
-        WHERE d.role = 'dentist' AND p.role = 'patient'
-        AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = d.id AND n.notification_type = 'message')
-        LIMIT 1;
-      `);
-
-      // Vérifier le nombre de notifications créées
-      const countResult = await pool.query(
-        "SELECT COUNT(*) as total FROM notifications"
+      const configResult = await pool.query(
+        "SELECT * FROM llm_settings LIMIT 1"
       );
-      const totalNotifications = countResult.rows[0].total;
+
+      if (configResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Configuration LLM non trouvée",
+          message: "Aucune configuration LLM n'existe en base de données",
+        });
+      }
+
+      const config = configResult.rows[0];
 
       console.log(
-        "✅ [ADMIN] Table notifications créée avec",
-        totalNotifications,
-        "entrées"
+        `✅ [ADMIN] Configuration LLM récupérée - Model: ${config.model_name}, Temp: ${config.temperature}`
       );
 
       res.json({
         success: true,
-        message: "Table notifications créée avec succès",
         data: {
-          total_notifications: totalNotifications,
-          test_data_created: true,
+          id: config.id,
+          systemPrompt: config.system_prompt,
+          systemPromptUrgence: config.system_prompt_urgence,
+          temperature: config.temperature,
+          topP: config.top_p,
+          maxTokens: config.max_tokens,
+          numCtx: config.num_ctx,
+          stopSequences: config.stop_sequences,
+          keepAliveMinutes: config.keep_alive_minutes,
+          timeoutSeconds: config.timeout_seconds,
+          modelName: config.model_name,
+          createdAt: config.created_at,
+          updatedAt: config.updated_at,
         },
+        message: "Configuration LLM récupérée avec succès",
       });
     } catch (error) {
-      console.error("❌ [ADMIN] Erreur initialisation notifications:", error);
+      console.error("❌ [ADMIN] Erreur récupération config LLM:", error);
       res.status(500).json({
-        error: "Erreur lors de l'initialisation de la table notifications",
+        error: "Erreur serveur",
         details: error.message,
       });
     }
   }
 );
 
-// ================================
-// 🔔 ENDPOINTS NOTIFICATIONS CRUD
-// ================================
+// Route: Mettre à jour la configuration LLM
+app.put(
+  "/api/admin/llm-config",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      console.log(
+        "🤖 [ADMIN] Mise à jour configuration LLM par:",
+        req.user.email
+      );
 
-// GET /api/notifications - Récupérer les notifications de l'utilisateur connecté
-app.get("/api/notifications", authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
+      const {
+        systemPrompt,
+        systemPromptUrgence,
+        temperature,
+        topP,
+        maxTokens,
+        numCtx,
+        stopSequences,
+        keepAliveMinutes,
+        timeoutSeconds,
+        modelName,
+      } = req.body;
 
-    console.log(
-      "🔔 [NOTIFICATIONS] Récupération notifications pour utilisateur:",
-      userId,
-      "| req.user:",
-      req.user
-    );
+      // Validation des données
+      const validationErrors = [];
 
-    // Récupérer les notifications avec informations de l'expéditeur
-    const notificationsQuery = `
-      SELECT 
-        n.id,
-        n.notification_type,
-        n.content,
-        n.link,
-        n.priority,
-        n.is_read,
-        n.read_at,
-        n.created_at,
-        COALESCE(sender.first_name || ' ' || sender.last_name, 'Système') as sender_name,
-        COALESCE(sender.role, 'system') as sender_role
-      FROM notifications n
-      LEFT JOIN users sender ON n.sender_id = sender.id
-      WHERE n.user_id = $1
-      ORDER BY n.created_at DESC
-      LIMIT 100
-    `;
+      if (temperature !== undefined && (temperature < 0 || temperature > 2)) {
+        validationErrors.push("La température doit être entre 0 et 2");
+      }
 
-    const notificationsResult = await pool.query(notificationsQuery, [userId]);
+      if (topP !== undefined && (topP < 0 || topP > 1)) {
+        validationErrors.push("Le top_p doit être entre 0 et 1");
+      }
 
-    console.log("🔔 [NOTIFICATIONS] Résultat requête SQL:", {
-      userId: userId,
-      foundNotifications: notificationsResult.rows.length,
-      notifications: notificationsResult.rows,
-    });
+      if (maxTokens !== undefined && (maxTokens < 1 || maxTokens > 4096)) {
+        validationErrors.push("Le max_tokens doit être entre 1 et 4096");
+      }
 
-    // Compter le total et les non-lues
-    const statsQuery = `
-      SELECT 
-        COUNT(*) as total_count,
-        COUNT(CASE WHEN is_read = false THEN 1 END) as unread_count
-      FROM notifications
-      WHERE user_id = $1
-    `;
+      if (numCtx !== undefined && (numCtx < 128 || numCtx > 32768)) {
+        validationErrors.push("Le num_ctx doit être entre 128 et 32768");
+      }
 
-    const statsResult = await pool.query(statsQuery, [userId]);
-    const stats = statsResult.rows[0];
+      if (
+        keepAliveMinutes !== undefined &&
+        (keepAliveMinutes < 1 || keepAliveMinutes > 1440)
+      ) {
+        validationErrors.push(
+          "Le keep_alive_minutes doit être entre 1 et 1440 (24h)"
+        );
+      }
 
-    res.json({
-      success: true,
-      data: {
-        notifications: notificationsResult.rows,
-        unread_count: parseInt(stats.unread_count),
-        total_count: parseInt(stats.total_count),
-      },
-    });
-  } catch (error) {
-    console.error("❌ [NOTIFICATIONS] Erreur récupération:", error);
-    res.status(500).json({
-      success: false,
-      error: "Erreur lors de la récupération des notifications",
-      message: error.message,
-    });
-  }
-});
+      if (
+        timeoutSeconds !== undefined &&
+        (timeoutSeconds < 5 || timeoutSeconds > 300)
+      ) {
+        validationErrors.push("Le timeout_seconds doit être entre 5 et 300");
+      }
 
-// POST /api/notifications - Créer une nouvelle notification
-app.post("/api/notifications", authenticateToken, async (req, res) => {
-  try {
-    const senderId = req.user.userId;
-    const {
-      user_id,
-      notification_type = "message",
-      content,
-      link,
-      priority = "normal",
-    } = req.body;
+      if (validationErrors.length > 0) {
+        return res.status(400).json({
+          error: "Données invalides",
+          details: validationErrors,
+        });
+      }
 
-    console.log(
-      "🔔 [NOTIFICATIONS] Création notification par:",
-      senderId,
-      "pour:",
-      user_id
-    );
+      // Construire la requête de mise à jour dynamiquement
+      const updateFields = [];
+      const updateValues = [];
+      let paramIndex = 1;
 
-    // Validation des données
-    if (!user_id || !content) {
-      return res.status(400).json({
-        success: false,
-        error: "user_id et content sont requis",
+      if (systemPrompt !== undefined) {
+        updateFields.push(`system_prompt = $${paramIndex++}`);
+        updateValues.push(systemPrompt);
+      }
+
+      if (systemPromptUrgence !== undefined) {
+        updateFields.push(`system_prompt_urgence = $${paramIndex++}`);
+        updateValues.push(systemPromptUrgence);
+      }
+
+      if (temperature !== undefined) {
+        updateFields.push(`temperature = $${paramIndex++}`);
+        updateValues.push(temperature);
+      }
+
+      if (topP !== undefined) {
+        updateFields.push(`top_p = $${paramIndex++}`);
+        updateValues.push(topP);
+      }
+
+      if (maxTokens !== undefined) {
+        updateFields.push(`max_tokens = $${paramIndex++}`);
+        updateValues.push(maxTokens);
+      }
+
+      if (numCtx !== undefined) {
+        updateFields.push(`num_ctx = $${paramIndex++}`);
+        updateValues.push(numCtx);
+      }
+
+      if (stopSequences !== undefined) {
+        updateFields.push(`stop_sequences = $${paramIndex++}`);
+        updateValues.push(stopSequences);
+      }
+
+      if (keepAliveMinutes !== undefined) {
+        updateFields.push(`keep_alive_minutes = $${paramIndex++}`);
+        updateValues.push(keepAliveMinutes);
+      }
+
+      if (timeoutSeconds !== undefined) {
+        updateFields.push(`timeout_seconds = $${paramIndex++}`);
+        updateValues.push(timeoutSeconds);
+      }
+
+      if (modelName !== undefined) {
+        updateFields.push(`model_name = $${paramIndex++}`);
+        updateValues.push(modelName);
+      }
+
+      if (updateFields.length === 0) {
+        return res.status(400).json({
+          error: "Aucune donnée à mettre à jour",
+          message: "Vous devez fournir au moins un champ à modifier",
+        });
+      }
+
+      // Ajouter updated_at
+      updateFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+      const updateQuery = `
+        UPDATE llm_settings 
+        SET ${updateFields.join(", ")}
+        WHERE id = (SELECT id FROM llm_settings LIMIT 1)
+        RETURNING *
+      `;
+
+      const updateResult = await pool.query(updateQuery, updateValues);
+
+      if (updateResult.rows.length === 0) {
+        return res.status(404).json({
+          error: "Configuration LLM non trouvée",
+          message: "Aucune configuration LLM n'existe en base de données",
+        });
+      }
+
+      const updatedConfig = updateResult.rows[0];
+
+      console.log(
+        `✅ [ADMIN] Configuration LLM mise à jour - ${updateFields.length} champs modifiés`
+      );
+
+      res.json({
+        success: true,
+        data: {
+          id: updatedConfig.id,
+          systemPrompt: updatedConfig.system_prompt,
+          systemPromptUrgence: updatedConfig.system_prompt_urgence,
+          temperature: updatedConfig.temperature,
+          topP: updatedConfig.top_p,
+          maxTokens: updatedConfig.max_tokens,
+          numCtx: updatedConfig.num_ctx,
+          stopSequences: updatedConfig.stop_sequences,
+          keepAliveMinutes: updatedConfig.keep_alive_minutes,
+          timeoutSeconds: updatedConfig.timeout_seconds,
+          modelName: updatedConfig.model_name,
+          createdAt: updatedConfig.created_at,
+          updatedAt: updatedConfig.updated_at,
+        },
+        message: "Configuration LLM mise à jour avec succès",
+        updatedFields: updateFields.length - 1, // -1 pour exclure updated_at
+      });
+    } catch (error) {
+      console.error("❌ [ADMIN] Erreur mise à jour config LLM:", error);
+      res.status(500).json({
+        error: "Erreur serveur",
+        details: error.message,
       });
     }
-
-    // Vérifier que l'utilisateur destinataire existe
-    const userCheck = await pool.query("SELECT id FROM users WHERE id = $1", [
-      user_id,
-    ]);
-    if (userCheck.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Utilisateur destinataire non trouvé",
-      });
-    }
-
-    // Insérer la notification
-    const insertQuery = `
-      INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
-      VALUES ($1, $2, $3, $4, $5, $6)
-      RETURNING id, created_at
-    `;
-
-    const result = await pool.query(insertQuery, [
-      user_id,
-      senderId,
-      notification_type,
-      content,
-      link,
-      priority,
-    ]);
-
-    const notification = result.rows[0];
-
-    // Récupérer la notification complète avec infos expéditeur
-    const fullNotificationQuery = `
-      SELECT 
-        n.id,
-        n.notification_type,
-        n.content,
-        n.link,
-        n.priority,
-        n.is_read,
-        n.read_at,
-        n.created_at,
-        COALESCE(sender.first_name || ' ' || sender.last_name, 'Système') as sender_name,
-        COALESCE(sender.role, 'system') as sender_role
-      FROM notifications n
-      LEFT JOIN users sender ON n.sender_id = sender.id
-      WHERE n.id = $1
-    `;
-
-    const fullResult = await pool.query(fullNotificationQuery, [
-      notification.id,
-    ]);
-
-    res.status(201).json({
-      success: true,
-      data: fullResult.rows[0],
-    });
-  } catch (error) {
-    console.error("❌ [NOTIFICATIONS] Erreur création:", error);
-    res.status(500).json({
-      success: false,
-      error: "Erreur lors de la création de la notification",
-      message: error.message,
-    });
   }
-});
-
-// PUT /api/notifications/:id/read - Marquer une notification comme lue
-app.put("/api/notifications/:id/read", authenticateToken, async (req, res) => {
-  try {
-    const notificationId = parseInt(req.params.id);
-    const userId = req.user.userId;
-
-    console.log(
-      "🔔 [NOTIFICATIONS] Marquage lu notification:",
-      notificationId,
-      "par:",
-      userId
-    );
-
-    // Vérifier que la notification appartient à l'utilisateur
-    const checkQuery =
-      "SELECT id FROM notifications WHERE id = $1 AND user_id = $2";
-    const checkResult = await pool.query(checkQuery, [notificationId, userId]);
-
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Notification non trouvée ou accès non autorisé",
-      });
-    }
-
-    // Marquer comme lue
-    const updateQuery = `
-      UPDATE notifications 
-      SET is_read = true, read_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $1 AND user_id = $2
-      RETURNING id, read_at
-    `;
-
-    const result = await pool.query(updateQuery, [notificationId, userId]);
-
-    res.json({
-      success: true,
-      data: {
-        id: result.rows[0].id,
-        read_at: result.rows[0].read_at,
-      },
-    });
-  } catch (error) {
-    console.error("❌ [NOTIFICATIONS] Erreur marquage lu:", error);
-    res.status(500).json({
-      success: false,
-      error: "Erreur lors du marquage comme lu",
-      message: error.message,
-    });
-  }
-});
-
-// DELETE /api/notifications/:id - Supprimer une notification
-app.delete("/api/notifications/:id", authenticateToken, async (req, res) => {
-  try {
-    const notificationId = parseInt(req.params.id);
-    const userId = req.user.userId;
-
-    console.log(
-      "🔔 [NOTIFICATIONS] Suppression notification:",
-      notificationId,
-      "par:",
-      userId
-    );
-
-    // Vérifier que la notification appartient à l'utilisateur
-    const checkQuery =
-      "SELECT id FROM notifications WHERE id = $1 AND user_id = $2";
-    const checkResult = await pool.query(checkQuery, [notificationId, userId]);
-
-    if (checkResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: "Notification non trouvée ou accès non autorisé",
-      });
-    }
-
-    // Supprimer la notification
-    const deleteQuery =
-      "DELETE FROM notifications WHERE id = $1 AND user_id = $2";
-    await pool.query(deleteQuery, [notificationId, userId]);
-
-    res.json({
-      success: true,
-      data: {
-        id: notificationId,
-        deleted: true,
-      },
-    });
-  } catch (error) {
-    console.error("❌ [NOTIFICATIONS] Erreur suppression:", error);
-    res.status(500).json({
-      success: false,
-      error: "Erreur lors de la suppression",
-      message: error.message,
-    });
-  }
-});
+);
 
 // ================================
 // 🏗️ ENDPOINT TEMPORAIRE: INITIALISATION TABLES ADMIN
@@ -1756,21 +1744,6 @@ app.post(
         feedback_comment TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
-
-        // Table notifications
-        `CREATE TABLE IF NOT EXISTS notifications (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-        sender_id INTEGER REFERENCES users(id),
-        notification_type VARCHAR(50) DEFAULT 'message',
-        content TEXT NOT NULL,
-        link VARCHAR(255),
-        priority VARCHAR(20) DEFAULT 'normal',
-        is_read BOOLEAN DEFAULT FALSE,
-        read_at TIMESTAMP,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );`,
       ];
 
       // Créer les tables
@@ -1778,7 +1751,7 @@ app.post(
         await pool.query(query);
       }
 
-      // 2. Créer la vue admin_stats (temporairement sans notifications pour éviter problème permissions)
+      // 2. Créer la vue admin_stats
       await pool.query(`
       CREATE OR REPLACE VIEW admin_stats AS
       SELECT 
@@ -1857,39 +1830,6 @@ app.post(
       WHERE p.role = 'patient' AND d.role = 'dentist'
       AND NOT EXISTS (SELECT 1 FROM chat_conversations cc WHERE cc.patient_id = p.id)
       LIMIT 3;
-    `);
-
-      // Notifications de test
-      await pool.query(`
-      INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
-      SELECT 
-        p.id as user_id,
-        d.id as sender_id,
-        'appointment' as notification_type,
-        'Rappel : Votre rendez-vous de contrôle est prévu demain à 14h30. N''oubliez pas d''apporter votre carte vitale.' as content,
-        '/patient/appointments' as link,
-        'high' as priority
-      FROM users p
-      CROSS JOIN users d
-      WHERE p.role = 'patient' AND d.role = 'dentist'
-      AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = p.id)
-      LIMIT 2;
-    `);
-
-      await pool.query(`
-      INSERT INTO notifications (user_id, sender_id, notification_type, content, link, priority)
-      SELECT 
-        d.id as user_id,
-        p.id as sender_id,
-        'message' as notification_type,
-        'Nouveau message d''un patient concernant des douleurs post-opératoires.' as content,
-        '/dentist/messages' as link,
-        'normal' as priority
-      FROM users d
-      CROSS JOIN users p
-      WHERE d.role = 'dentist' AND p.role = 'patient'
-      AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = d.id AND n.notification_type = 'message')
-      LIMIT 1;
     `);
 
       // 5. Vérifier les stats finales
@@ -2116,37 +2056,12 @@ app.use(function (req, res) {
 // DÉMARRAGE SERVEUR
 // ================================
 
-// ✅ INITIALISATION OLLAMA AU DÉMARRAGE + WARM-UP SERVICE
-async function initOllamaWithRetry() {
-  console.log("🔥 [STARTUP] Initialisation service warm-up Ollama...");
-
-  for (let i = 0; i < 3; i++) {
-    const status = await ensureOllamaReady();
-    if (status.status === "warm") {
-      console.log("✅ [STARTUP] Ollama prêt - Service warm-up activé");
-      break;
-    }
-    console.log(`🔄 [STARTUP] Retry Ollama init ${i + 1}/3...`);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-  }
-}
-
-// ✅ MAINTENANCE PROACTIVE : Keep-alive intelligent toutes les 10 minutes
-setInterval(async () => {
-  try {
-    const status = await ensureOllamaReady();
-    console.log(`🔧 [MAINTENANCE] Ollama ${status.status} - Keep-alive sent`);
-  } catch (error) {
-    console.log(`⚠️ [MAINTENANCE] Keep-alive failed: ${error.message}`);
-  }
-}, 10 * 60 * 1000); // 10 minutes
-
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(
     "╔══════════════════════════════════════════════════════════════╗"
   );
   console.log(
-    "║               🦷 SERVEUR MELYIA CHATBOT v24 🤖               ║"
+    "║               🦷 SERVEUR MELYIA CHATBOT v23 🤖               ║"
   );
   console.log(
     "╚══════════════════════════════════════════════════════════════╝"
@@ -2155,12 +2070,6 @@ app.listen(PORT, async () => {
   console.log("🚀 Serveur démarré sur le port " + PORT);
   console.log("📅 " + new Date().toLocaleString("fr-FR"));
   console.log("");
-
-  // 🔥 INITIALISATION OLLAMA ASYNCHRONE
-  initOllamaWithRetry().catch((err) =>
-    console.error("❌ [STARTUP] Erreur init Ollama:", err.message)
-  );
-
   console.log("🔗 ROUTES DISPONIBLES:");
   console.log("   GET  /api/health              - État des services");
   console.log("   POST /api/auth/login          - Connexion utilisateur");
@@ -2168,10 +2077,6 @@ app.listen(PORT, async () => {
   console.log("   GET  /api/patients            - Liste patients (dentistes)");
   console.log("   POST /api/documents/upload    - Upload documents médicaux");
   console.log("   POST /api/chat                - Chat IA local avec Ollama");
-  console.log("   POST /api/chat/warmup         - 🔥 WARM-UP CHATBOT PROACTIF");
-  console.log(
-    "   GET  /api/chat/status         - 🔥 STATUS CHATBOT TEMPS RÉEL"
-  );
   console.log("   GET  /api/admin/stats         - Statistiques admin");
   console.log("   GET  /api/admin/users         - Gestion utilisateurs admin");
   console.log("   POST /hooks/deploy            - Webhook déploiement PÉRENNE");

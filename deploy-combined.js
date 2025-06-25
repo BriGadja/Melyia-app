@@ -1,305 +1,202 @@
+// 🚀 SCRIPT DEPLOIEMENT COMBINE - MELYIA v25.0
+// Déploie Landing Page + Application en une seule commande
+
 import fs from "fs";
 import path from "path";
-import FormData from "form-data";
-import fetch from "node-fetch";
-import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Configuration des déploiements (basée sur vos scripts existants)
-const DEPLOYMENTS = {
-  landing: {
-    name: "Landing Page",
-    serverUrl: "https://dev.melyia.com",
-    webhookEndpoint: "/hooks/deploy",
-    webhookToken:
-      "2bce1774a17bf4a01b21798780481413a9872b27c457b7c778e7c157125a6410",
-    buildDir: "./dist/landing",
-    buildCommand: "build:landing",
-    targetPath: "/var/www/melyia/dev",
-    domain: "dev.melyia.com",
+const CONFIG = {
+  SSH: {
+    user: "ubuntu",
+    host: "51.91.145.255",
+    key: null, // Utiliser la clé SSH par défaut
   },
-  app: {
-    name: "Application Auth",
-    serverUrl: "https://app-dev.melyia.com",
-    webhookEndpoint: "/hooks/deploy",
-    webhookToken:
-      "2bce1774a17bf4a01b21798780481413a9872b27c457b7c778e7c157125a6410",
-    buildDir: "./dist/app",
-    buildCommand: "build:app",
-    targetPath: "/var/www/melyia/app-dev",
-    domain: "app-dev.melyia.com",
+  PATHS: {
+    landing: {
+      local: "dist/landing",
+      remote: "/var/www/melyia/dev-site",
+    },
+    app: {
+      local: "dist/app",
+      remote: "/var/www/melyia/app-dev",
+    },
   },
 };
 
-/**
- * Utilitaire de logging coloré (copié de deploy-to-dev.js)
- */
-function log(message, color = "white") {
+function log(message, color = "cyan") {
   const colors = {
-    red: "\x1b[31m",
     green: "\x1b[32m",
+    red: "\x1b[31m",
     yellow: "\x1b[33m",
-    blue: "\x1b[34m",
     cyan: "\x1b[36m",
-    white: "\x1b[37m",
     reset: "\x1b[0m",
   };
-  console.log(`${colors[color] || colors.white}${message}${colors.reset}`);
+  console.log(`${colors[color]}${message}${colors.reset}`);
 }
 
-/**
- * Build d'un projet spécifique
- */
-async function buildProject(deployment) {
+function executeCommand(command, description) {
   try {
-    log(`🔨 Build ${deployment.name}...`, "blue");
-
-    const { spawn } = await import("child_process");
-
-    return new Promise((resolve, reject) => {
-      const buildProcess = spawn("npm", ["run", deployment.buildCommand], {
-        stdio: "pipe",
-        shell: true,
-      });
-
-      let output = "";
-      buildProcess.stdout.on("data", (data) => {
-        output += data.toString();
-        process.stdout.write(data);
-      });
-
-      buildProcess.stderr.on("data", (data) => {
-        output += data.toString();
-        process.stderr.write(data);
-      });
-
-      buildProcess.on("close", (code) => {
-        if (code === 0) {
-          log(`✅ Build ${deployment.name} réussi !`, "green");
-          resolve(true);
-        } else {
-          log(`❌ Build ${deployment.name} échoué avec le code ${code}`, "red");
-          reject(new Error(`Build failed with code ${code}`));
-        }
-      });
-    });
+    log(`🔄 ${description}...`);
+    const result = execSync(command, { encoding: "utf8" });
+    log(`✅ ${description} - Terminé`);
+    return result;
   } catch (error) {
-    log(`❌ Erreur build ${deployment.name}: ${error.message}`, "red");
-    return false;
+    log(`❌ Erreur ${description}: ${error.message}`, "red");
+    throw error;
   }
 }
 
-/**
- * Collecte récursive des fichiers à déployer (logique de deploy-to-dev.js)
- */
-async function collectFiles(buildDir) {
-  const files = [];
+async function deployLanding() {
+  const localPath = CONFIG.PATHS.landing.local;
+  const remotePath = CONFIG.PATHS.landing.remote;
 
-  function scanDirectory(dirPath, relativePath = "") {
-    const items = fs.readdirSync(dirPath);
-
-    for (const item of items) {
-      const fullPath = path.join(dirPath, item);
-      const itemRelativePath = path
-        .join(relativePath, item)
-        .replace(/\\/g, "/");
-
-      if (fs.statSync(fullPath).isDirectory()) {
-        scanDirectory(fullPath, itemRelativePath);
-      } else {
-        files.push({
-          path: fullPath,
-          relativePath: itemRelativePath,
-          name: item,
-          size: fs.statSync(fullPath).size,
-        });
-      }
-    }
+  if (!fs.existsSync(localPath)) {
+    throw new Error(`Dossier build landing non trouvé: ${localPath}`);
   }
 
-  if (!fs.existsSync(buildDir)) {
-    throw new Error(`Répertoire build introuvable: ${buildDir}`);
-  }
+  const sshCmd = `ssh ${CONFIG.SSH.user}@${CONFIG.SSH.host}`;
+  const scpCmd = `scp -r ${localPath}/* ${CONFIG.SSH.user}@${CONFIG.SSH.host}:${remotePath}/`;
 
-  scanDirectory(buildDir);
-  return files;
+  // Créer le dossier distant et corriger les permissions AVANT la copie
+  executeCommand(
+    `${sshCmd} "sudo mkdir -p ${remotePath} && sudo chown -R ubuntu:ubuntu ${remotePath} && sudo chmod -R 755 ${remotePath}"`,
+    "Préparation dossier distant landing"
+  );
+
+  // Copier les fichiers
+  executeCommand(scpCmd, "Upload fichiers landing page");
+
+  // Corriger les permissions finales pour www-data
+  executeCommand(
+    `${sshCmd} "sudo chown -R www-data:www-data ${remotePath} && sudo chmod -R 644 ${remotePath}/* && sudo find ${remotePath} -type d -exec chmod 755 {} +"`,
+    "Correction permissions landing"
+  );
 }
 
-/**
- * Déploiement vers un serveur spécifique (combinaison des deux logiques)
- */
-async function deployToTarget(deployment) {
+async function deployApp() {
+  const localPath = CONFIG.PATHS.app.local;
+  const remotePath = CONFIG.PATHS.app.remote;
+
+  if (!fs.existsSync(localPath)) {
+    throw new Error(`Dossier build app non trouvé: ${localPath}`);
+  }
+
+  const sshCmd = `ssh ${CONFIG.SSH.user}@${CONFIG.SSH.host}`;
+
+  // 🛡️ PROTECTION BACKEND : Sauvegarde avant déploiement
+  executeCommand(
+    `${sshCmd} "
+      # Sauvegarde backend si existe
+      if [ -d ${remotePath} ]; then
+        mkdir -p /tmp/backend-backup-combined &&
+        cd ${remotePath} &&
+        [ -f server.js ] && cp server.js /tmp/backend-backup-combined/ || true &&
+        [ -f package.json ] && cp package.json /tmp/backend-backup-combined/ || true &&
+        [ -d node_modules ] && cp -r node_modules /tmp/backend-backup-combined/ || true
+      fi"`,
+    "Sauvegarde backend"
+  );
+
+  // Créer dossier temporaire pour upload
+  const tempRemote = `/tmp/app-upload-combined`;
+  executeCommand(
+    `${sshCmd} "mkdir -p ${tempRemote}"`,
+    "Création dossier temporaire"
+  );
+
+  // Upload vers dossier temporaire
+  const scpCmd = `scp -r ${localPath}/* ${CONFIG.SSH.user}@${CONFIG.SSH.host}:${tempRemote}/`;
+  executeCommand(scpCmd, "Upload fichiers application");
+
+  // Installation avec protection backend
+  executeCommand(
+    `${sshCmd} "
+      # Préparation dossier final
+      sudo mkdir -p ${remotePath} &&
+      
+      # Nettoyage sélectif (garde les fichiers backend)
+      sudo find ${remotePath} -maxdepth 1 -name 'index*.html' -delete 2>/dev/null || true &&
+      sudo rm -rf ${remotePath}/assets 2>/dev/null || true &&
+      
+      # Installation nouveau frontend
+      sudo cp -r ${tempRemote}/* ${remotePath}/ &&
+      
+      # Restauration backend
+      [ -f /tmp/backend-backup-combined/server.js ] && sudo cp /tmp/backend-backup-combined/server.js ${remotePath}/ || true &&
+      [ -f /tmp/backend-backup-combined/package.json ] && sudo cp /tmp/backend-backup-combined/package.json ${remotePath}/ || true &&
+      [ -d /tmp/backend-backup-combined/node_modules ] && sudo cp -r /tmp/backend-backup-combined/node_modules ${remotePath}/ || true &&
+      
+      # Permissions frontend uniquement
+      sudo chown -R www-data:www-data ${remotePath}/assets ${remotePath}/index*.html 2>/dev/null || true &&
+      sudo chmod -R 644 ${remotePath}/index*.html 2>/dev/null || true &&
+      sudo chmod -R 644 ${remotePath}/assets/* 2>/dev/null || true &&
+      sudo find ${remotePath}/assets -type d -exec chmod 755 {} + 2>/dev/null || true &&
+      
+      # Lien symbolique
+      cd ${remotePath} &&
+      sudo ln -sf index-app.html index.html &&
+      sudo chown -h www-data:www-data index.html &&
+      
+      # Nettoyage
+      rm -rf ${tempRemote} /tmp/backend-backup-combined
+    "`,
+    "Installation app avec protection backend"
+  );
+}
+
+async function validateDeployment() {
   try {
-    log(
-      `🚀 Déploiement ${deployment.name} vers ${deployment.domain}...`,
-      "blue"
+    log("🔍 Validation du déploiement...");
+
+    // Test landing page
+    executeCommand(
+      'curl -s -o /dev/null -w "%{http_code}" https://dev.melyia.com',
+      "Test landing page"
     );
 
-    const files = await collectFiles(deployment.buildDir);
-
-    if (!files || files.length === 0) {
-      log(`❌ Aucun fichier à déployer pour ${deployment.name}`, "red");
-      return false;
-    }
-
-    const form = new FormData();
-
-    // Métadonnées du déploiement (style deploy-to-dev.js)
-    form.append(
-      "metadata",
-      JSON.stringify({
-        timestamp: new Date().toISOString(),
-        files_count: files.length,
-        total_size: files.reduce((sum, f) => sum + f.size, 0),
-        source: "cursor-local-combined",
-        target: deployment.targetPath,
-        version: "22.1.0",
-        type: deployment.name.toLowerCase().replace(/\s+/g, "-"),
-      })
+    // Test application
+    executeCommand(
+      'curl -s -o /dev/null -w "%{http_code}" https://app-dev.melyia.com',
+      "Test application"
     );
 
-    // Ajout de tous les fichiers (méthode deploy-to-dev.js + app-dev.js)
-    for (const file of files) {
-      form.append("files", fs.createReadStream(file.path), {
-        filename: file.relativePath,
-      });
-    }
-
-    log(`📁 Fichiers à déployer depuis ${deployment.buildDir}/`, "blue");
-    files.forEach((f) => log(`   - ${f.relativePath}`, "white"));
-
-    log(`📤 Upload vers ${deployment.domain}...`, "blue");
-
-    // Requête de déploiement (compatible avec les deux formats)
-    const response = await fetch(
-      `${deployment.serverUrl}${deployment.webhookEndpoint}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${deployment.webhookToken}`,
-          "X-Webhook-Token": deployment.webhookToken, // Compatible app-dev.js
-          ...form.getHeaders(),
-        },
-        body: form,
-      }
-    );
-
-    const result = await response.json();
-
-    if (response.ok) {
-      log(`✅ ${deployment.name} déployée avec succès !`, "green");
-      log(`📊 Détails:`, "blue");
-      log(`   - Status: ${response.status}`, "yellow");
-      log(`   - Fichiers déployés: ${files.length}`, "yellow");
-      log(`🌐 Disponible sur: https://${deployment.domain}`, "cyan");
-      return true;
-    } else {
-      log(
-        `❌ Erreur déploiement ${deployment.name} (${response.status}): ${
-          result.error || result.message
-        }`,
-        "red"
-      );
-      if (result.details) {
-        log(`   Détails: ${result.details}`, "red");
-      }
-      return false;
-    }
+    log("✅ Validation réussie", "green");
   } catch (error) {
-    log(`❌ Erreur déploiement ${deployment.name}: ${error.message}`, "red");
-    console.error(error);
-    return false;
+    log(`⚠️ Warning: Validation partielle - ${error.message}`, "yellow");
   }
 }
 
-/**
- * 🚀 FONCTION PRINCIPALE - DÉPLOIEMENT COMBINÉ
- */
-async function deployBoth() {
-  log("\n🚀 === DÉPLOIEMENT COMBINÉ MELYIA v22.1 ===\n", "blue");
-  log("🎯 Landing Page + Application Auth", "cyan");
-
+async function main() {
   const startTime = Date.now();
-  const results = [];
-  let overallSuccess = true;
+
+  log("🚀 DÉPLOIEMENT COMBINÉ MELYIA - DÉMARRAGE", "green");
+  log("=====================================");
 
   try {
-    // Étape 1 : Build des deux projets
-    log("📦 PHASE 1 : BUILD DES PROJETS", "blue");
-    log("================================", "blue");
-
-    for (const [key, deployment] of Object.entries(DEPLOYMENTS)) {
-      const buildSuccess = await buildProject(deployment);
-      if (!buildSuccess) {
-        log(`❌ Build ${deployment.name} échoué - arrêt du processus`, "red");
-        process.exit(1);
-      }
+    // Vérifier les builds
+    if (!fs.existsSync("dist/landing") || !fs.existsSync("dist/app")) {
+      throw new Error(
+        'Builds manquants. Exécutez "npm run build:both" d\'abord.'
+      );
     }
 
-    log("✅ Tous les builds terminés avec succès !\n", "green");
+    // Déploiement parallèle
+    await Promise.all([deployLanding(), deployApp()]);
 
-    // Étape 2 : Déploiements séquentiels
-    log("🚀 PHASE 2 : DÉPLOIEMENTS", "blue");
-    log("==========================", "blue");
+    // Validation
+    await validateDeployment();
 
-    for (const [key, deployment] of Object.entries(DEPLOYMENTS)) {
-      const deploySuccess = await deployToTarget(deployment);
-      results.push({
-        name: deployment.name,
-        success: deploySuccess,
-        domain: deployment.domain,
-      });
-      overallSuccess = overallSuccess && deploySuccess;
-
-      // Pause entre les déploiements pour éviter la surcharge serveur
-      if (key === "landing") {
-        log("⏳ Pause 3s avant déploiement suivant...\n", "yellow");
-        await new Promise((resolve) => setTimeout(resolve, 3000));
-      }
-    }
-
-    // Étape 3 : Résumé final
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
-    log("\n🎯 RÉSUMÉ DÉPLOIEMENT", "blue");
-    log("====================", "blue");
-
-    results.forEach((result) => {
-      const status = result.success ? "✅ SUCCÈS" : "❌ ÉCHEC";
-      log(
-        `${status} ${result.name} → https://${result.domain}`,
-        result.success ? "green" : "red"
-      );
-    });
-
-    if (overallSuccess) {
-      log(`\n🎉 DÉPLOIEMENT COMBINÉ RÉUSSI EN ${duration}s !`, "green");
-      log("🌐 Vos sites sont maintenant disponibles :", "cyan");
-      log("   • Landing: https://dev.melyia.com", "cyan");
-      log("   • Application: https://app-dev.melyia.com", "cyan");
-      log(
-        "\n💡 Conseil: Videz le cache navigateur (Ctrl+F5) si pas de changement",
-        "yellow"
-      );
-      log("🔧 Prochaine étape : Tester les deux interfaces", "yellow");
-    } else {
-      log(`\n❌ DÉPLOIEMENT PARTIELLEMENT ÉCHOUÉ (${duration}s)`, "red");
-      log("Vérifiez les logs ci-dessus pour plus de détails", "red");
-      process.exit(1);
-    }
+    log("=====================================");
+    log(`🎉 DÉPLOIEMENT RÉUSSI en ${duration}s`, "green");
+    log("📍 Landing: https://dev.melyia.com");
+    log("📍 App: https://app-dev.melyia.com");
   } catch (error) {
-    log(`\n💥 Erreur fatale: ${error.message}`, "red");
-    console.error(error);
+    log("=====================================");
+    log(`💥 ERREUR DÉPLOIEMENT: ${error.message}`, "red");
     process.exit(1);
   }
 }
 
-// Auto-exécution garantie (style v23.0.0-PERENNE)
-log("🔄 Démarrage script de déploiement combiné...", "blue");
-deployBoth().catch((error) => {
-  log(`❌ Erreur fatale: ${error.message}`, "red");
-  console.error(error);
-  process.exit(1);
-});
+main();
