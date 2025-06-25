@@ -21,6 +21,13 @@ export interface ChatbotStatus {
   timestamp: string;
 }
 
+// ✅ NOUVEAU : Interface pour demande de RDV
+export interface AppointmentRequestResponse {
+  success: boolean;
+  message: string;
+  error?: string;
+}
+
 export class ChatAPI {
   private static getAuthToken(): string | null {
     return localStorage.getItem("auth_token");
@@ -35,6 +42,61 @@ export class ChatAPI {
     return import.meta.env.DEV
       ? `/api${endpoint}`
       : `https://app-dev.melyia.com/api${endpoint}`;
+  }
+
+  // ✅ NOUVEAU : Demande de rendez-vous
+  static async requestAppointment(
+    message?: string
+  ): Promise<AppointmentRequestResponse> {
+    const token = this.getAuthToken();
+    const user = this.getCurrentUser();
+
+    if (!token) {
+      throw new Error("Token d'authentification manquant");
+    }
+
+    if (!user || !user.id) {
+      throw new Error("Utilisateur non trouvé");
+    }
+
+    if (user.role !== "patient") {
+      throw new Error("Seuls les patients peuvent demander des rendez-vous");
+    }
+
+    try {
+      console.log(`🗓️ [RDV] Demande de rendez-vous - Patient: ${user.id}`);
+
+      const response = await fetch(
+        this.getApiUrl("/patients/request-appointment"),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            message: message || "Demande de rendez-vous",
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("❌ [RDV] Erreur API:", data);
+        throw new Error(data.message || `Erreur ${response.status}`);
+      }
+
+      console.log("✅ [RDV] Demande envoyée:", data);
+      return data;
+    } catch (error: any) {
+      console.error("❌ [RDV] Erreur complète:", error);
+      return {
+        success: false,
+        message: "Erreur lors de l'envoi de la demande",
+        error: error.message,
+      };
+    }
   }
 
   // ✅ NOUVEAU : Warm-up proactif du chatbot

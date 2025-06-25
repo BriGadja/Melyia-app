@@ -1354,7 +1354,68 @@ app.get("/api/chat/status", authenticateToken, async (req, res) => {
   }
 });
 
-// Route: Notifications (placeholder pour compatibilité frontend)
+// ================================
+// 🚀 ROUTES NOTIFICATIONS V33
+// ================================
+
+// Route: Demander un rendez-vous (patient)
+app.post(
+  "/api/patients/request-appointment",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      if (req.user.role !== "patient") {
+        return res
+          .status(403)
+          .json({ success: false, message: "Réservé aux patients" });
+      }
+
+      // Identifier le dentiste du patient
+      const profileRes = await pool.query(
+        "SELECT dentist_id FROM patient_profiles WHERE user_id = $1",
+        [req.user.userId]
+      );
+
+      const dentistId = profileRes.rows[0]?.dentist_id;
+      if (!dentistId) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Aucun dentiste associé" });
+      }
+
+      // Récupérer nom du patient pour le message
+      const userRes = await pool.query(
+        "SELECT first_name, last_name FROM users WHERE id = $1",
+        [req.user.userId]
+      );
+      const { first_name, last_name } = userRes.rows[0];
+      const contentMsg = `📅 Demande de rendez-vous de ${first_name} ${last_name}`;
+
+      // Insérer la notification en base
+      await pool.query(
+        `INSERT INTO notifications(user_id, sender_id, notification_type, content, is_read)
+       VALUES($1, $2, $3, $4, false)`,
+        [dentistId, req.user.userId, "appointment_request", contentMsg]
+      );
+
+      console.log(
+        `🔔 Notification RDV créée pour dentiste=${dentistId} par patient=${req.user.userId}`
+      );
+
+      return res.json({
+        success: true,
+        message: "Demande de rendez-vous envoyée",
+      });
+    } catch (error) {
+      console.error("❌ Erreur demande RDV:", error);
+      res
+        .status(500)
+        .json({ success: false, message: "Erreur serveur demande RDV" });
+    }
+  }
+);
+
+// Route: Notifications (données réelles de la base)
 app.get("/api/notifications", authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -1364,18 +1425,49 @@ app.get("/api/notifications", authenticateToken, async (req, res) => {
       `🔔 [NOTIFICATIONS] Récupération pour user: ${userId} (${userRole})`
     );
 
-    // Pour l'instant, retourner des notifications fictives/système
-    const notifications = [
-      {
-        id: 1,
-        type: "system",
-        title: "Système de notifications",
-        message: "Le système de notifications sera bientôt disponible.",
-        read: false,
-        created_at: new Date().toISOString(),
-        priority: "info",
-      },
-    ];
+    // Récupérer les notifications réelles de la base de données
+    const notificationsResult = await pool.query(
+      `
+      SELECT 
+        n.id,
+        n.notification_type,
+        n.content,
+        n.link,
+        n.priority,
+        n.is_read,
+        n.read_at,
+        n.created_at,
+        n.updated_at,
+        s.first_name as sender_first_name,
+        s.last_name as sender_last_name
+      FROM notifications n
+      LEFT JOIN users s ON n.sender_id = s.id
+      WHERE n.user_id = $1
+      ORDER BY n.created_at DESC
+      LIMIT 50
+    `,
+      [userId]
+    );
+
+    // Formater les notifications pour le frontend
+    const notifications = notificationsResult.rows.map((notif) => ({
+      id: notif.id,
+      type: notif.notification_type,
+      title: getNotificationTitle(notif.notification_type),
+      message: notif.content,
+      read: notif.is_read,
+      created_at: notif.created_at,
+      priority: notif.priority || "info",
+      link: notif.link,
+      sender_name:
+        notif.sender_first_name && notif.sender_last_name
+          ? `${notif.sender_first_name} ${notif.sender_last_name}`
+          : null,
+    }));
+
+    console.log(
+      `✅ [NOTIFICATIONS] ${notifications.length} notifications récupérées pour user ${userId}`
+    );
 
     res.json({
       success: true,
@@ -1393,6 +1485,22 @@ app.get("/api/notifications", authenticateToken, async (req, res) => {
     });
   }
 });
+
+// Fonction helper pour les titres des notifications
+function getNotificationTitle(type) {
+  switch (type) {
+    case "appointment_request":
+      return "Demande de rendez-vous";
+    case "appointment_confirmed":
+      return "Rendez-vous confirmé";
+    case "appointment_cancelled":
+      return "Rendez-vous annulé";
+    case "system":
+      return "Notification système";
+    default:
+      return "Notification";
+  }
+}
 
 // ===================================
 // ROUTES ADMIN SUPER-ADMIN (v23)
