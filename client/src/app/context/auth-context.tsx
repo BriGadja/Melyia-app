@@ -35,6 +35,10 @@ interface AuthContextType extends AuthState {
   register: (userData: any) => Promise<{ success: boolean; error?: string }>;
   isAdmin: boolean; // ✅ Helper pour vérifier si l'utilisateur est admin
   hasPermission: (permission: keyof AdminPermissions) => boolean; // ✅ Vérification permissions
+  // ✅ NOUVEAU : Gestion patientId pour chatbot RAG
+  currentPatientId: number | null;
+  setCurrentPatient: (patientId: number | null) => void;
+  getEffectivePatientId: () => number | null;
 }
 
 // Création du Context
@@ -64,6 +68,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     isLoading: true, // Loading au démarrage pour vérifier le token stocké
     isAuthenticated: false,
   });
+
+  // ✅ NOUVEAU : State pour patientId sélectionné (RAG)
+  const [currentPatientId, setCurrentPatientIdState] = useState<number | null>(
+    null
+  );
 
   // Fonction de connexion
   const login = async (email: string, password: string) => {
@@ -132,6 +141,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return authState.user.permissions[permission] === true;
   };
 
+  // ✅ NOUVEAU : Fonction pour définir le patient courant
+  const setCurrentPatient = (patientId: number | null) => {
+    console.log("🎯 [AUTH] Changement patient courant:", patientId);
+    setCurrentPatientIdState(patientId);
+  };
+
+  // ✅ NOUVEAU : Logique intelligente pour obtenir le patientId effectif
+  const getEffectivePatientId = (): number | null => {
+    if (!authState.user) return null;
+
+    switch (authState.user.role) {
+      case "patient":
+        // ✅ Patient : toujours son propre ID
+        return authState.user.id;
+
+      case "dentist":
+      case "admin":
+        // ✅ Dentiste/Admin : patientId sélectionné ou null
+        return currentPatientId;
+
+      default:
+        return null;
+    }
+  };
+
   // Vérification du token au chargement de l'app
   useEffect(() => {
     const checkAuthState = async () => {
@@ -189,6 +223,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     register,
     isAdmin, // ✅ Nouvelle propriété
     hasPermission, // ✅ Nouvelle méthode
+    // ✅ NOUVEAU : Gestion patientId pour chatbot RAG
+    currentPatientId,
+    setCurrentPatient,
+    getEffectivePatientId,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

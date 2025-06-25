@@ -117,7 +117,10 @@ export class ChatAPI {
     }
   }
 
-  static async sendMessage(message: string): Promise<ChatResponse> {
+  static async sendMessage(
+    message: string,
+    patientId?: number
+  ): Promise<ChatResponse> {
     const token = this.getAuthToken();
     const user = this.getCurrentUser();
 
@@ -129,7 +132,23 @@ export class ChatAPI {
       throw new Error("Utilisateur non trouvé");
     }
 
-    console.log("Envoi message avec patientId:", user.id);
+    // ✅ NOUVEAU : Logique intelligente patientId
+    let effectivePatientId: number;
+
+    if (patientId) {
+      // PatientId explicite fourni (pour dentistes/admins)
+      effectivePatientId = patientId;
+    } else if (user.role === "patient") {
+      // Patient : toujours son propre ID
+      effectivePatientId = user.id;
+    } else {
+      // Dentiste/Admin sans patientId : erreur
+      throw new Error("PatientId requis pour les dentistes et admins");
+    }
+
+    console.log(
+      `🎯 [API] Envoi message - User: ${user.id} (${user.role}) → PatientId: ${effectivePatientId}`
+    );
 
     try {
       const response = await fetch(this.getApiUrl("/chat"), {
@@ -140,7 +159,7 @@ export class ChatAPI {
         },
         body: JSON.stringify({
           message,
-          patientId: user.id.toString(), // Obligatoire pour l'API
+          patientId: effectivePatientId.toString(), // ✅ PatientId intelligent
         }),
         // ✅ NOUVEAU : Timeout étendu côté frontend
         signal: AbortSignal.timeout(60000), // 60s timeout côté frontend

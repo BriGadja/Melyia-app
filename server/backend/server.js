@@ -174,6 +174,56 @@ const webUpload = multer({
   },
 });
 
+// ================================
+// 🔄 FONCTION GÉNÉRATION EMBEDDINGS OPENAI
+// ================================
+
+async function generateEmbedding(text) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    throw new Error("Clé API OpenAI manquante (OPENAI_API_KEY)");
+  }
+
+  try {
+    console.log(
+      `🧠 [EMBEDDING] Génération pour: "${text.substring(0, 50)}..."`
+    );
+
+    // Appel API OpenAI embeddings
+    const response = await axios.post(
+      "https://api.openai.com/v1/embeddings",
+      {
+        input: text,
+        model: "text-embedding-ada-002",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        timeout: 30000, // 30s timeout pour l'API OpenAI
+      }
+    );
+
+    // Extraire le vecteur (1536 dimensions)
+    const vector = response.data.data[0].embedding;
+
+    console.log(`✅ [EMBEDDING] Vecteur généré: ${vector.length} dimensions`);
+
+    return vector;
+  } catch (error) {
+    console.error(
+      "❌ [EMBEDDING] Erreur génération:",
+      error.response?.data || error.message
+    );
+    throw new Error(
+      `Erreur génération embedding: ${
+        error.response?.data?.error?.message || error.message
+      }`
+    );
+  }
+}
+
 // FONCTION KEEP-ALIVE OLLAMA ULTRA-OPTIMISÉE
 async function ensureOllamaReady() {
   try {
@@ -682,12 +732,40 @@ app.post(
           content = `[${file.mimetype}] ${file.originalname}`;
         }
 
-        // Insérer en base
+        // ✅ ÉTAPE 2 : Génération embedding pour contenu textuel
+        let embeddingVector = null;
+        if (
+          content &&
+          !content.includes("Contenu à extraire") &&
+          content.trim().length > 10
+        ) {
+          try {
+            console.log(
+              `🧠 [UPLOAD] Génération embedding pour: ${file.originalname}`
+            );
+            embeddingVector = await generateEmbedding(content);
+            console.log(
+              `✅ [UPLOAD] Embedding généré: ${embeddingVector.length} dimensions`
+            );
+          } catch (embedError) {
+            console.error(
+              `❌ [UPLOAD] Erreur embedding pour ${file.originalname}:`,
+              embedError.message
+            );
+            // Continuer sans embedding en cas d'erreur
+          }
+        }
+
+        // Insérer en base avec embedding
+        const embeddingSQL = embeddingVector
+          ? `'[${embeddingVector.join(",")}]'::vector`
+          : "NULL";
+
         const documentResult = await pool.query(
           `
         INSERT INTO patient_documents
-        (patient_id, dentist_id, document_type, title, content, file_path, file_name, file_size, mime_type, processing_status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'completed')
+        (patient_id, dentist_id, document_type, title, content, file_path, file_name, file_size, mime_type, embedding, processing_status)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, ${embeddingSQL}, 'completed')
         RETURNING id
       `,
           [
@@ -708,6 +786,8 @@ app.post(
           filename: file.originalname,
           size: file.size,
           type: type,
+          hasEmbedding: embeddingVector !== null,
+          embeddingDimensions: embeddingVector ? embeddingVector.length : 0,
         });
       }
 
@@ -780,30 +860,104 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
 
     console.log(`⚡ [INTENT_FAST] Intent: ${intent}, Urgent: ${isUrgent}`);
 
-    // ✅ OPTIMISATION 2: Documents limités et ciblés
-    const documentsQuery = `
-      SELECT id, title, content, document_type, file_name, created_at
-      FROM patient_documents
-      WHERE patient_id = $1 AND processing_status = 'completed'
-      ORDER BY created_at DESC
-      LIMIT 2
-    `;
+    // ✅ ÉTAPE 3: Recherche vectorielle intelligente pour documents pertinents
+    let documents = [];
+    try {
+      // Génération embedding de la question pour recherche vectorielle
+      console.log(
+        `🧠 [RAG] Génération embedding question: "${message.substring(
+          0,
+          50
+        )}..."`
+      );
+      const questionEmbedding = await generateEmbedding(message);
 
-    const documentsResult = await pool.query(documentsQuery, [patientId]);
-    const documents = documentsResult.rows;
+      // Recherche vectorielle avec similarité cosinale (pgvector)
+      const vectorSearchQuery = `
+        SELECT id, title, content, document_type, file_name, created_at,
+               (embedding <-> '[${questionEmbedding.join(
+                 ","
+               )}]'::vector) AS distance
+        FROM patient_documents
+        WHERE patient_id = $1 AND dentist_id = $2 AND embedding IS NOT NULL AND processing_status = 'completed'
+        ORDER BY distance ASC
+        LIMIT 3
+      `;
 
-    console.log(`📄 [DOCS_FAST] ${documents.length} documents récupérés`);
+      const vectorResult = await pool.query(vectorSearchQuery, [
+        patientId,
+        userId,
+      ]);
 
-    // ✅ OPTIMISATION 3: Contexte médical ultra-concis
+      // Filtrer par seuil de pertinence (distance < 0.8 = documents pertinents)
+      const relevantDocs = vectorResult.rows.filter(
+        (doc) => doc.distance < 0.8
+      );
+      documents = relevantDocs;
+
+      console.log(
+        `🔍 [RAG] ${documents.length} documents pertinents trouvés par recherche vectorielle (seuil: 0.8)`
+      );
+
+      // Fallback vers recherche classique si pas de documents pertinents
+      if (documents.length === 0) {
+        console.log(`📄 [RAG] Fallback vers récupération classique`);
+        const fallbackQuery = `
+          SELECT id, title, content, document_type, file_name, created_at
+          FROM patient_documents
+          WHERE patient_id = $1 AND dentist_id = $2 AND processing_status = 'completed'
+          ORDER BY created_at DESC
+          LIMIT 2
+        `;
+        const fallbackResult = await pool.query(fallbackQuery, [
+          patientId,
+          userId,
+        ]);
+        documents = fallbackResult.rows;
+      }
+    } catch (vectorError) {
+      console.error(
+        "❌ [RAG] Erreur recherche vectorielle:",
+        vectorError.message
+      );
+
+      // Fallback complet vers récupération classique en cas d'erreur
+      const fallbackQuery = `
+        SELECT id, title, content, document_type, file_name, created_at
+        FROM patient_documents
+        WHERE patient_id = $1 AND dentist_id = $2 AND processing_status = 'completed'
+        ORDER BY created_at DESC
+        LIMIT 2
+      `;
+      const fallbackResult = await pool.query(fallbackQuery, [
+        patientId,
+        userId,
+      ]);
+      documents = fallbackResult.rows;
+      console.log(
+        `📄 [RAG] Fallback utilisé: ${documents.length} documents récupérés`
+      );
+    }
+
+    console.log(
+      `📄 [DOCS_RAG] ${documents.length} documents finaux pour contexte`
+    );
+
+    // ✅ ÉTAPE 3: Contexte médical enrichi par recherche vectorielle
     const contextPrompt =
       documents.length > 0
         ? documents
-            .map((doc) => {
-              const content = doc.content ? doc.content.substring(0, 200) : ""; // Réduit de 800 à 200 chars
-              return `[${doc.document_type}] ${content}`;
+            .map((doc, index) => {
+              const content = doc.content ? doc.content.substring(0, 300) : ""; // Augmenté pour documents pertinents
+              const relevance = doc.distance
+                ? ` (pertinence: ${(1 - doc.distance).toFixed(2)})`
+                : "";
+              return `[${doc.document_type}] ${
+                doc.title || doc.file_name
+              }${relevance}: ${content}`;
             })
             .join("\n")
-        : "Pas de documents récents.";
+        : "Aucun document pertinent trouvé dans le dossier patient.";
 
     // ✅ OPTIMISATION 4: Récupération configuration LLM complète (une seule requête)
     const llmConfigResult = await pool.query(

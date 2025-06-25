@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { ChatMessage } from "./chat-message";
 import { ChatInput } from "./chat-input";
+import { PatientSelector } from "./patient-selector";
+import { useAuth } from "../../context/auth-context";
 import {
   ChatAPI,
   WarmupResponse,
@@ -18,25 +20,26 @@ interface ChatbotState {
 }
 
 export function ChatInterface() {
+  const { user, currentPatientId, setCurrentPatient, getEffectivePatientId } =
+    useAuth();
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [user, setUser] = useState<any>(null);
   // ✅ NOUVEAU : État du chatbot pour UX optimisée
   const [chatbotState, setChatbotState] = useState<ChatbotState>({
     status: "initializing",
     isReady: false,
     message: "Initialisation du chatbot...",
   });
+  // ✅ NOUVEAU : État RAG pour indicateurs visuels
+  const [ragStatus, setRagStatus] = useState<
+    "idle" | "searching" | "found" | "fallback"
+  >("idle");
+  const [relevantDocs, setRelevantDocs] = useState<string[]>([]);
 
   useEffect(() => {
-    // Vérifier que l'utilisateur est connecté et valide
-    const userStr = localStorage.getItem("auth_user");
-    if (userStr) {
-      const userData = JSON.parse(userStr);
-      setUser(userData);
-      console.log("Utilisateur connecté:", userData);
-
-      // ✅ NOUVEAU : Démarrer le warm-up automatiquement
+    // ✅ NOUVEAU : Démarrer le warm-up automatiquement si utilisateur connecté
+    if (user) {
+      console.log("Utilisateur connecté:", user);
       initializeChatbot();
     } else {
       console.error("Aucun utilisateur trouvé");
@@ -46,7 +49,7 @@ export function ChatInterface() {
         message: "Erreur d'authentification",
       });
     }
-  }, []);
+  }, [user]);
 
   // ✅ NOUVEAU : Fonction d'initialisation intelligente du chatbot
   const initializeChatbot = async () => {
@@ -187,12 +190,29 @@ export function ChatInterface() {
   };
 
   const handleSendMessage = async (content: string) => {
-    // Vérification préalable
+    // ✅ NOUVEAU : Vérifications avancées avec patientId
     if (!user || !user.id) {
       const errorMessage: ChatMessageType = {
         id: Date.now().toString(),
         content:
           "Erreur: Utilisateur non identifié. Veuillez vous reconnecter.",
+        role: "assistant",
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      return;
+    }
+
+    // ✅ NOUVEAU : Vérification patientId pour dentistes/admins
+    const effectivePatientId = getEffectivePatientId();
+    if (
+      (user.role === "dentist" || user.role === "admin") &&
+      !effectivePatientId
+    ) {
+      const errorMessage: ChatMessageType = {
+        id: Date.now().toString(),
+        content:
+          "⚠️ Veuillez sélectionner un patient avant d'utiliser le chatbot médical.",
         role: "assistant",
         timestamp: new Date(),
       };
@@ -223,8 +243,22 @@ export function ChatInterface() {
     setIsLoading(true);
 
     try {
-      console.log("Envoi du message pour user:", user.id);
-      const response = await ChatAPI.sendMessage(content);
+      // ✅ NOUVEAU : Indicateurs RAG visuels
+      setRagStatus("searching");
+      setRelevantDocs([]);
+
+      console.log(
+        `🎯 [UI] Envoi message - User: ${user.id} (${user.role}) → Patient: ${effectivePatientId}`
+      );
+      const response = await ChatAPI.sendMessage(
+        content,
+        effectivePatientId || undefined
+      );
+
+      // ✅ NOUVEAU : Traitement réponse avec indicateurs RAG
+      const hasDocuments = response.sources && response.sources.length > 0;
+      setRagStatus(hasDocuments ? "found" : "fallback");
+      setRelevantDocs(response.sources || []);
 
       const assistantMessage: ChatMessageType = {
         id: (Date.now() + 1).toString(),
@@ -258,6 +292,8 @@ export function ChatInterface() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      // ✅ NOUVEAU : Reset état RAG après message
+      setTimeout(() => setRagStatus("idle"), 3000);
     }
   };
 
@@ -273,6 +309,46 @@ export function ChatInterface() {
 
   return (
     <div className="flex flex-col h-full rounded-lg bg-white shadow-sm overflow-hidden">
+      {/* ✅ NOUVEAU : Sélecteur de patients */}
+      <PatientSelector
+        onPatientSelect={setCurrentPatient}
+        selectedPatientId={currentPatientId}
+      />
+
+      {/* ✅ NOUVEAU : Indicateurs RAG */}
+      {ragStatus !== "idle" && (
+        <div
+          className={`px-4 py-2 text-sm border-b ${
+            ragStatus === "searching"
+              ? "bg-blue-50 text-blue-700 border-blue-200"
+              : ragStatus === "found"
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-orange-50 text-orange-700 border-orange-200"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {ragStatus === "searching" && (
+              <>
+                <div className="w-3 h-3 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                <span>🔍 Recherche dans les documents médicaux...</span>
+              </>
+            )}
+            {ragStatus === "found" && (
+              <>
+                <span>📄</span>
+                <span>Documents utilisés : {relevantDocs.join(", ")}</span>
+              </>
+            )}
+            {ragStatus === "fallback" && (
+              <>
+                <span>🤖</span>
+                <span>Réponse générale - Aucun document spécifique trouvé</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ✅ NOUVEAU : Barre de status du chatbot */}
       <div
         className={`px-4 py-3 text-sm border-b ${
