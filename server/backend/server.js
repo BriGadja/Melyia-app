@@ -628,7 +628,8 @@ app.get("/api/patients", authenticateToken, async (req, res) => {
       });
     }
 
-    const patientsResult = await pool.query(`
+    const patientsResult = await pool.query(
+      `
       SELECT
         u.id,
         u.first_name,
@@ -639,12 +640,14 @@ app.get("/api/patients", authenticateToken, async (req, res) => {
         pp.emergency_contact,
         COUNT(pd.id) as documents_count
       FROM users u
-      LEFT JOIN patient_profiles pp ON u.id = pp.user_id
+      INNER JOIN patient_profiles pp ON u.id = pp.user_id
       LEFT JOIN patient_documents pd ON u.id = pd.patient_id
-      WHERE u.role = 'patient' AND u.is_active = true
+      WHERE u.role = 'patient' AND u.is_active = true AND pp.dentist_id = $1
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at, pp.emergency_contact
       ORDER BY u.created_at DESC
-    `);
+    `,
+      [req.user.userId]
+    );
 
     console.log(
       `📋 Liste patients demandée par dentiste ${req.user.userId}: ${patientsResult.rows.length} patients`
@@ -668,6 +671,72 @@ app.get("/api/patients", authenticateToken, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Erreur lors de la récupération des patients",
+    });
+  }
+});
+
+// Route création patient (pour dentistes)
+app.post("/api/patients", authenticateToken, async (req, res) => {
+  try {
+    if (req.user.role !== "dentist") {
+      return res.status(403).json({
+        success: false,
+        message: "Accès interdit",
+      });
+    }
+
+    const { email, firstName, lastName, phone } = req.body;
+
+    if (!email || !firstName || !lastName) {
+      return res.status(400).json({
+        success: false,
+        message: "Informations incomplètes",
+      });
+    }
+
+    // Vérifier si l'email est déjà utilisé
+    const userCheck = await pool.query(
+      "SELECT id FROM users WHERE email = $1",
+      [email]
+    );
+    if (userCheck.rows.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: "Email déjà utilisé",
+      });
+    }
+
+    // Créer le nouvel utilisateur patient (mot de passe temporaire généré)
+    const tempPwd = Math.random().toString(36).slice(-8); // génère un pwd aléatoire
+    const hash = await bcrypt.hash(tempPwd, 10);
+
+    const userResult = await pool.query(
+      `INSERT INTO users(email, password_hash, first_name, last_name, phone, role, is_active, email_verified)
+       VALUES($1, $2, $3, $4, $5, 'patient', true, false) RETURNING id`,
+      [email, hash, firstName, lastName, phone || null]
+    );
+    const newPatientId = userResult.rows[0].id;
+
+    // Créer le profil patient en liant le dentiste courant
+    await pool.query(
+      `INSERT INTO patient_profiles(user_id, dentist_id) VALUES($1, $2)`,
+      [newPatientId, req.user.userId]
+    );
+
+    console.log(
+      `👤 Nouveau patient créé: userID=${newPatientId} par dentiste=${req.user.userId}`
+    );
+
+    return res.json({
+      success: true,
+      patientId: newPatientId,
+      message: "Patient créé avec succès",
+    });
+  } catch (error) {
+    console.error("❌ Erreur création patient:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la création du patient",
     });
   }
 });
@@ -705,6 +774,19 @@ app.post(
         return res.status(404).json({
           success: false,
           message: "Patient non trouvé",
+        });
+      }
+
+      // Vérifier que le patient est bien un de ceux du dentiste connecté
+      const profileCheck = await pool.query(
+        "SELECT dentist_id FROM patient_profiles WHERE user_id = $1",
+        [patientId]
+      );
+      const dentistId = profileCheck.rows[0]?.dentist_id;
+      if (!dentistId || dentistId !== req.user.userId) {
+        return res.status(403).json({
+          success: false,
+          message: "Ce patient n'est pas rattaché à votre cabinet",
         });
       }
 

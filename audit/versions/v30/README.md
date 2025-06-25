@@ -198,38 +198,216 @@ const BigUpdate = () => {
   // 10 fichiers modifiés simultanément
   // Impossible à débugger
 };
-
-// Hooks dans fonctions rendu
-const renderSection = () => {
-  const [state, setState] = useState(); // ❌ ERREUR React #310
-};
-
-// Suppositions non vérifiées
-// "Ça devrait marcher" sans tests
 ```
 
-### ✅ **Après v30.1 (Optimisé)**
+## 🔧 **RÈGLES SSH ET RÉSOLUTION INTERFACE BLANCHE v30.1**
+
+### 🚀 **SSH FONCTIONNE TOUJOURS - RÈGLE CRITIQUE**
+
+**IMPORTANT** : Ne **JAMAIS** supposer que SSH ne fonctionne pas ! SSH est opérationnel à 100%.
+
+#### **Syntaxe SSH correcte (PowerShell Windows) :**
+
+```bash
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "commande"
+```
+
+#### **Tests SSH de diagnostic :**
+
+```bash
+# 1. Test connexion basique
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "echo 'SSH OK' && date && whoami"
+
+# 2. Test permissions serveur
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "sudo ls -la /var/www/melyia/app-dev/"
+
+# 3. Test assets spécifique
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "sudo ls -la /var/www/melyia/app-dev/assets/"
+```
+
+### 🎯 **RÉSOLUTION INTERFACE BLANCHE - MÉTHODOLOGIE ÉPROUVÉE**
+
+**RÈGLE ABSOLUE** : L'interface blanche = **problème de permissions serveur**, PAS de cache !
+
+#### **Diagnostic automatique interface blanche :**
 
 ```javascript
-// Modifications ciblées
-const PreciseUpdate = () => {
-  // Changement spécifique
-  // Objectif mesurable
-  // Tests avant/après
-};
+// test-interface-diagnostic.mjs
+import axios from "axios";
 
-// Hooks au niveau composant
-const Component: React.FC = () => {
-  const [state, setState] = useState(); // ✅ CORRECT
+async function diagnosticInterfaceBlanche() {
+  const BASE_URL = "https://app-dev.melyia.com";
 
-  const renderSection = () => {
-    // Utilisation state niveau supérieur
-  };
-};
+  // 1. Test HTML principal
+  const htmlResponse = await axios.get(`${BASE_URL}/index-app.html`);
+  console.log(
+    `HTML: ${htmlResponse.status} (${htmlResponse.data.length} chars)`
+  );
 
-// Validation systématique
-// Tests audit + validation obligatoires
+  // 2. Extraire les assets CSS/JS
+  const cssMatch = htmlResponse.data.match(/\/assets\/[^"]+\.css/);
+  const jsMatch = htmlResponse.data.match(/\/assets\/[^"]+\.js/);
+
+  // 3. Tester chaque asset
+  if (cssMatch) {
+    const cssResponse = await axios.get(`${BASE_URL}${cssMatch[0]}`, {
+      validateStatus: (status) => status < 500,
+    });
+    console.log(`CSS: ${cssResponse.status} - ${cssMatch[0]}`);
+    if (cssResponse.status === 403) {
+      console.log("❌ PROBLÈME: Permissions CSS bloquées");
+    }
+  }
+
+  if (jsMatch) {
+    const jsResponse = await axios.get(`${BASE_URL}${jsMatch[0]}`, {
+      validateStatus: (status) => status < 500,
+    });
+    console.log(`JS: ${jsResponse.status} - ${jsMatch[0]}`);
+    if (jsResponse.status === 403) {
+      console.log("❌ PROBLÈME: Permissions JS bloquées");
+    }
+  }
+}
 ```
+
+#### **Correction automatique permissions :**
+
+```bash
+# Correction immédiate via SSH
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "sudo chmod 755 /var/www/melyia/app-dev/assets && sudo chmod 644 /var/www/melyia/app-dev/assets/*"
+
+# Vérification correction
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "sudo ls -la /var/www/melyia/app-dev/assets/"
+```
+
+### 🎯 **PRIORITÉS DIAGNOSTIC INTERFACE BLANCHE**
+
+#### **1. TOUJOURS commencer par les permissions serveur :**
+
+```bash
+# Vérifier structure serveur
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "sudo ls -la /var/www/melyia/app-dev/"
+
+# Vérifier permissions assets
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "sudo ls -la /var/www/melyia/app-dev/assets/"
+```
+
+#### **2. Tester les assets directement :**
+
+```javascript
+// Test HTTP direct des assets
+const response = await axios.get(
+  "https://app-dev.melyia.com/assets/index-app-HASH.css",
+  {
+    validateStatus: (status) => status < 500,
+  }
+);
+
+if (response.status === 403) {
+  console.log("❌ PERMISSIONS BLOQUÉES - Corriger via SSH");
+} else if (response.status === 404) {
+  console.log("❌ FICHIER MANQUANT - Redéployer");
+} else if (response.status === 200) {
+  console.log("✅ ASSET OK - Problème ailleurs");
+}
+```
+
+#### **3. NE PAS perdre de temps sur le cache :**
+
+- ❌ **Éviter** : Force refresh, clear cache, cache-busting
+- ❌ **Éviter** : Modifications headers cache
+- ❌ **Éviter** : Redéploiements multiples
+- ✅ **Priorité** : Permissions serveur via SSH
+
+#### **4. Ordre de résolution optimal :**
+
+1. **SSH diagnostic structure** (2 minutes)
+2. **Correction permissions** (1 minute)
+3. **Test assets HTTP** (1 minute)
+4. **Validation interface** (1 minute)
+
+**Total : 5 minutes au lieu de 2 heures !**
+
+### 🚫 **ERREURS À ÉVITER ABSOLUMENT**
+
+#### **❌ Supposer que SSH ne fonctionne pas :**
+
+```bash
+# ❌ FAUX : "SSH ne marche pas, on va faire autrement"
+# ✅ CORRECT : Tester SSH avec diagnostic complet
+ssh -i "C:\Users\pc\.ssh\melyia_main" ubuntu@51.91.145.255 "echo 'TEST'"
+```
+
+#### **❌ Se concentrer sur le cache :**
+
+```javascript
+// ❌ FAUX : Perte de temps sur cache-busting
+const cacheBuster = Date.now();
+window.location.href = `${url}?v=${cacheBuster}`;
+
+// ✅ CORRECT : Test direct permissions
+const response = await axios.get("/assets/file.css", {
+  validateStatus: () => true,
+});
+if (response.status === 403) {
+  /* Corriger permissions */
+}
+```
+
+#### **❌ Redéploiements multiples :**
+
+```bash
+# ❌ FAUX : Redéployer sans diagnostic
+npm run deploy:full  # Répété 5 fois
+
+# ✅ CORRECT : Diagnostic puis correction ciblée
+ssh ubuntu@server "sudo ls -la /var/www/assets/" # Identifier le problème
+ssh ubuntu@server "sudo chmod 755 /var/www/assets/" # Corriger directement
+```
+
+### 🎯 **TEMPLATE RÉSOLUTION INTERFACE BLANCHE**
+
+```javascript
+// resolution-interface-blanche.mjs
+async function resolutionInterfaceBlanche() {
+  console.log("🔍 RÉSOLUTION INTERFACE BLANCHE - PROTOCOLE v30.1");
+
+  // 1. Diagnostic SSH structure (PRIORITÉ 1)
+  execSync(
+    'ssh -i "C:\\Users\\pc\\.ssh\\melyia_main" ubuntu@51.91.145.255 "sudo ls -la /var/www/melyia/app-dev/"'
+  );
+
+  // 2. Diagnostic permissions assets
+  execSync(
+    'ssh -i "C:\\Users\\pc\\.ssh\\melyia_main" ubuntu@51.91.145.255 "sudo ls -la /var/www/melyia/app-dev/assets/"'
+  );
+
+  // 3. Test HTTP assets
+  const cssTest = await axios.get(
+    "https://app-dev.melyia.com/assets/index-app-HASH.css",
+    {
+      validateStatus: (status) => status < 500,
+    }
+  );
+
+  // 4. Correction automatique si 403
+  if (cssTest.status === 403) {
+    console.log("🛠️ CORRECTION PERMISSIONS AUTOMATIQUE");
+    execSync(
+      'ssh -i "C:\\Users\\pc\\.ssh\\melyia_main" ubuntu@51.91.145.255 "sudo chmod 755 /var/www/melyia/app-dev/assets && sudo chmod 644 /var/www/melyia/app-dev/assets/*"'
+    );
+
+    // 5. Validation correction
+    const cssTestApres = await axios.get(
+      "https://app-dev.melyia.com/assets/index-app-HASH.css"
+    );
+    console.log(cssTestApres.status === 200 ? "✅ CORRIGÉ" : "❌ ÉCHEC");
+  }
+}
+```
+
+**Cette méthodologie garantit une résolution en 5 minutes au lieu de 2 heures !**
 
 ## 🔄 CYCLE D'AMÉLIORATION CONTINUE
 
