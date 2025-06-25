@@ -14,6 +14,8 @@
     "preview": "vite preview",
     "deploy:landing": "npm run build:landing && node deploy-to-dev.js",
     "deploy:app": "npm run build:app && node deploy-to-app-dev.js",
+    "deploy:landing:github": "npm run build:landing && node deploy-to-dev-github.js",
+    "deploy:app:github": "npm run build:app && node deploy-to-app-dev-github.js",
     "type-check": "tsc --noEmit",
     "lint": "echo 'Lint check - TODO: setup ESLint'",
     "test": "echo 'Tests - TODO: setup Vitest'",

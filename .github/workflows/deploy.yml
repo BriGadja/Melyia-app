@@ -40,7 +40,7 @@ jobs:
           NODE_ENV: production
 
       - name: 🚀 Deploy to dev.melyia.com
-        run: npm run deploy:landing
+        run: npm run deploy:landing:github
         env:
           VITE_WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
 
@@ -70,7 +70,7 @@ jobs:
           VITE_DEV_MODE: false
 
       - name: 🚀 Deploy to app-dev.melyia.com
-        run: npm run deploy:app
+        run: npm run deploy:app:github
         env:
           VITE_WEBHOOK_TOKEN: ${{ secrets.WEBHOOK_TOKEN }}
 
