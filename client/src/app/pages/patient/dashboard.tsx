@@ -22,13 +22,7 @@ import { ChatAPI } from "@shared/lib/chat-api";
 import { useToast } from "@shared/hooks/use-toast";
 import { Toaster } from "@shared/components/ui/toaster";
 
-type ActiveSection =
-  | "chatbot"
-  | "dossier"
-  | "rdv"
-  | "communication"
-  | "documents"
-  | "profil";
+type ActiveSection = "chatbot" | "dossier" | "rdv" | "communication" | "profil";
 
 const PatientDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -48,9 +42,9 @@ const PatientDashboard: React.FC = () => {
     },
     {
       id: "dossier" as ActiveSection,
-      label: "Dossier",
+      label: "Dossier & Documents",
       icon: "📋",
-      description: "Informations médicales",
+      description: "Dossier médical & documents",
       gradient: "from-emerald-500 to-teal-400",
       bgGradient: "from-emerald-50 to-teal-50",
     },
@@ -69,14 +63,6 @@ const PatientDashboard: React.FC = () => {
       description: "Communication",
       gradient: "from-orange-500 to-red-400",
       bgGradient: "from-orange-50 to-red-50",
-    },
-    {
-      id: "documents" as ActiveSection,
-      label: "Documents",
-      icon: "📄",
-      description: "Devis & factures",
-      gradient: "from-indigo-500 to-purple-400",
-      bgGradient: "from-indigo-50 to-purple-50",
     },
     {
       id: "profil" as ActiveSection,
@@ -376,6 +362,10 @@ const PatientDashboard: React.FC = () => {
                       <li>• Suivi des traitements</li>
                       <li>• Allergies et antécédents</li>
                       <li>• Radiographies et examens</li>
+                      <li>• Devis et factures numériques</li>
+                      <li>• Plans de traitement détaillés</li>
+                      <li>• Téléchargement sécurisé</li>
+                      <li>• Archivage automatique</li>
                     </>
                   )}
                   {activeSection === "rdv" && (
@@ -392,14 +382,6 @@ const PatientDashboard: React.FC = () => {
                       <li>• Notifications en temps réel</li>
                       <li>• Partage d'images</li>
                       <li>• Conseils personnalisés</li>
-                    </>
-                  )}
-                  {activeSection === "documents" && (
-                    <>
-                      <li>• Devis et factures numériques</li>
-                      <li>• Plans de traitement détaillés</li>
-                      <li>• Téléchargement sécurisé</li>
-                      <li>• Archivage automatique</li>
                     </>
                   )}
                   {activeSection === "profil" && (
@@ -545,8 +527,8 @@ const PatientDashboard: React.FC = () => {
             {activeSection === "chatbot" && renderChatbotSection()}
             {activeSection === "dossier" &&
               renderComingSoonSection(
-                "Dossier Médical",
-                "Votre historique médical complet et sécurisé",
+                "Dossier & Documents",
+                "Votre dossier médical complet et tous vos documents dentaires",
                 "📋",
                 "from-emerald-500 to-teal-400"
               )}
@@ -557,13 +539,6 @@ const PatientDashboard: React.FC = () => {
                 "Communication directe avec votre dentiste",
                 "💬",
                 "from-orange-500 to-red-400"
-              )}
-            {activeSection === "documents" &&
-              renderComingSoonSection(
-                "Documents",
-                "Tous vos documents dentaires en un lieu",
-                "📄",
-                "from-indigo-500 to-purple-400"
               )}
             {activeSection === "profil" &&
               renderComingSoonSection(
