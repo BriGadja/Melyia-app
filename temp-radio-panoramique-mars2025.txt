@@ -1,0 +1,36 @@
+RAPPORT RADIOLOGIQUE - PANORAMIQUE DENTAIRE
+Date: 05/03/2025
+Patient: patient@melyia.com
+Prescripteur: Dr. Martin
+
+TECHNIQUE:
+- Orthopantomogramme numérique
+- Exposition: 8 mAs, 75 kV
+- Qualité: Bonne
+
+OBSERVATIONS RADIOLOGIQUES:
+
+DENTURE:
+- Formule dentaire: Complète (28 dents présentes)
+- Dents de sagesse: Incluses, position normale
+- Couronnes: Intégrité globalement conservée
+
+LÉSIONS CARIEUSES:
+- Dent 16: Obturation récente visible
+- Dent 47: Début de déminéralisation distale (surveillance)
+- Pas d'autres lésions évidentes
+
+PARODONTE:
+- Ligament alvéolo-dentaire: Normal
+- Corticales alvéolaires: Intègres
+- Hauteur osseuse: Conservation normale
+
+ARTICULATIONS:
+- ATM droite et gauche: Normales
+- Condyles: Morphologie normale
+- Pas de signes d'arthrose
+
+CONCLUSION:
+- État dentaire satisfaisant
+- Surveillance dent 47 recommandée
+- Poursuite hygiène et contrôles réguliers

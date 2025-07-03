@@ -641,7 +641,7 @@ app.get("/api/patients", authenticateToken, async (req, res) => {
         COUNT(pd.id) as documents_count
       FROM users u
       INNER JOIN patient_profiles pp ON u.id = pp.user_id
-      LEFT JOIN patient_documents pd ON u.id = pd.patient_id
+      LEFT JOIN personal_documents pd ON u.id = pd.patient_id
       WHERE u.role = 'patient' AND u.is_active = true AND pp.dentist_id = $1
       GROUP BY u.id, u.first_name, u.last_name, u.email, u.phone, u.created_at, pp.emergency_contact
       ORDER BY u.created_at DESC
@@ -845,7 +845,7 @@ app.post(
 
         const documentResult = await pool.query(
           `
-        INSERT INTO patient_documents
+        INSERT INTO personal_documents
         (patient_id, dentist_id, document_type, title, content, file_path, file_name, file_size, mime_type, embedding, processing_status)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, ${embeddingSQL}, 'completed')
         RETURNING id
@@ -960,7 +960,7 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
                (embedding <-> '[${questionEmbedding.join(
                  ","
                )}]'::vector) AS distance
-        FROM patient_documents
+        FROM personal_documents
         WHERE patient_id = $1 AND dentist_id = $2 AND embedding IS NOT NULL AND processing_status = 'completed'
         ORDER BY distance ASC
         LIMIT 3
@@ -986,7 +986,7 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
         console.log(`📄 [RAG] Fallback vers récupération classique`);
         const fallbackQuery = `
           SELECT id, title, content, document_type, file_name, created_at
-          FROM patient_documents
+          FROM personal_documents
           WHERE patient_id = $1 AND dentist_id = $2 AND processing_status = 'completed'
           ORDER BY created_at DESC
           LIMIT 2
@@ -1006,7 +1006,7 @@ app.post("/api/chat", authenticateToken, async (req, res) => {
       // Fallback complet vers récupération classique en cas d'erreur
       const fallbackQuery = `
         SELECT id, title, content, document_type, file_name, created_at
-        FROM patient_documents
+        FROM personal_documents
         WHERE patient_id = $1 AND dentist_id = $2 AND processing_status = 'completed'
         ORDER BY created_at DESC
         LIMIT 2
@@ -1686,7 +1686,7 @@ app.get(
         u_dentist.email as dentist_email,
         u_patient.email as patient_email,
         CONCAT(u_patient.first_name, ' ', u_patient.last_name) as patient_name
-      FROM patient_documents pd
+      FROM personal_documents pd
       LEFT JOIN users u_dentist ON pd.dentist_id = u_dentist.id
       LEFT JOIN users u_patient ON pd.patient_id = u_patient.id
       WHERE pd.processing_status = 'completed'
@@ -2053,8 +2053,8 @@ app.post(
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );`,
 
-        // Table patient_documents
-        `CREATE TABLE IF NOT EXISTS patient_documents (
+        // Table personal_documents (ex patient_documents)
+        `CREATE TABLE IF NOT EXISTS personal_documents (
         id SERIAL PRIMARY KEY,
         patient_id INTEGER REFERENCES users(id),
         dentist_id INTEGER REFERENCES users(id),
@@ -2103,10 +2103,10 @@ app.post(
         (SELECT COUNT(*) FROM users WHERE role = 'dentist') as total_dentists,
         (SELECT COUNT(*) FROM users WHERE role = 'patient') as total_patients,
         (SELECT COUNT(*) FROM users WHERE role = 'admin') as total_admins,
-        (SELECT COUNT(*) FROM patient_documents) as total_documents,
+        (SELECT COUNT(*) FROM personal_documents) as total_documents,
         (SELECT COUNT(*) FROM chat_conversations) as total_conversations,
         (SELECT COUNT(*) FROM users WHERE created_at > CURRENT_DATE - INTERVAL '7 days') as active_users,
-        (SELECT COALESCE(SUM(file_size), 0)::integer / (1024 * 1024) FROM patient_documents) as disk_usage_mb,
+        (SELECT COALESCE(SUM(file_size), 0)::integer / (1024 * 1024) FROM personal_documents) as disk_usage_mb,
         NOW() as last_updated;
     `);
 
@@ -2143,7 +2143,7 @@ app.post(
 
       // Documents de test
       await pool.query(`
-      INSERT INTO patient_documents (patient_id, dentist_id, document_type, title, file_name, file_path, file_size, processing_status, metadata)
+      INSERT INTO personal_documents (patient_id, dentist_id, document_type, title, file_name, file_path, file_size, processing_status, metadata)
       SELECT 
         p.id as patient_id,
         d.id as dentist_id,
@@ -2157,7 +2157,7 @@ app.post(
       FROM users d
       CROSS JOIN users p
       WHERE d.role = 'dentist' AND p.role = 'patient'
-      AND NOT EXISTS (SELECT 1 FROM patient_documents pd WHERE pd.patient_id = p.id)
+      AND NOT EXISTS (SELECT 1 FROM personal_documents pd WHERE pd.patient_id = p.id)
       LIMIT 5;
     `);
 
@@ -2336,6 +2336,167 @@ app.post("/hooks/deploy", validateWebhook, webUpload.any(), (req, res) => {
 });
 
 // ================================
+// ROUTES MANQUANTES - CORRECTION ERREURS 500
+// ================================
+
+// Route: Configuration LLM pour admin
+app.get(
+  "/api/admin/llm-settings",
+  authenticateToken,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      console.log(`⚙️ [LLM_CONFIG] Récupération config par: ${req.user.email}`);
+
+      // Récupération de la configuration LLM
+      const configResult = await pool.query(
+        "SELECT * FROM llm_settings ORDER BY created_at DESC LIMIT 1"
+      );
+
+      if (configResult.rows.length === 0) {
+        // Créer une configuration par défaut si elle n'existe pas
+        console.log("🔧 [LLM_CONFIG] Création configuration par défaut");
+
+        await pool.query(`
+        CREATE TABLE IF NOT EXISTS llm_settings (
+          id SERIAL PRIMARY KEY,
+          model_name VARCHAR(100) DEFAULT 'llama3.2:3b',
+          temperature DECIMAL(3,2) DEFAULT 0.7,
+          max_tokens INTEGER DEFAULT 200,
+          top_p DECIMAL(3,2) DEFAULT 0.9,
+          num_ctx INTEGER DEFAULT 2048,
+          timeout_seconds INTEGER DEFAULT 30,
+          keep_alive_minutes INTEGER DEFAULT 30,
+          system_prompt TEXT DEFAULT 'Tu es un assistant dentaire français expert. Réponds de manière professionnelle et rassurante.',
+          system_prompt_urgence TEXT DEFAULT 'Tu es un assistant dentaire d''urgence français. Évalue rapidement et conseille avec précision.',
+          stop_sequences TEXT[] DEFAULT ARRAY['\n\nQUESTION:', '\n\nDOSSIER:', 'RÉPONSE:', '\n---'],
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+        const insertResult = await pool.query(`
+        INSERT INTO llm_settings (model_name, temperature, max_tokens, system_prompt)
+        VALUES ('llama3.2:3b', 0.7, 200, 'Tu es un assistant dentaire français expert. Réponds de manière professionnelle et rassurante en te basant sur les documents du patient. Limite tes réponses à 150 mots maximum.')
+        RETURNING *
+      `);
+
+        const config = insertResult.rows[0];
+        console.log("✅ [LLM_CONFIG] Configuration par défaut créée");
+
+        return res.json({
+          success: true,
+          config: config,
+          isDefault: true,
+        });
+      }
+
+      const config = configResult.rows[0];
+      console.log("✅ [LLM_CONFIG] Configuration récupérée");
+
+      res.json({
+        success: true,
+        config: config,
+        isDefault: false,
+      });
+    } catch (error) {
+      console.error("❌ [LLM_CONFIG] Erreur:", error);
+      res.status(500).json({
+        success: false,
+        error: "Erreur lors de la récupération de la configuration LLM",
+        details: error.message,
+      });
+    }
+  }
+);
+
+// Route: Documents patient pour chatbot
+app.get(
+  "/api/patients/:patientId/documents",
+  authenticateToken,
+  async (req, res) => {
+    try {
+      const { patientId } = req.params;
+      const userId = req.user.userId;
+      const userRole = req.user.role;
+
+      console.log(
+        `📄 [DOCS] Récupération documents patient ${patientId} par user ${userId} (${userRole})`
+      );
+
+      // Vérification des permissions
+      if (userRole === "patient" && parseInt(patientId) !== userId) {
+        return res.status(403).json({
+          success: false,
+          error: "Accès non autorisé à ce patient",
+        });
+      }
+
+      // Récupération des documents
+      let query, params;
+
+      if (userRole === "patient") {
+        // Patient peut voir ses propres documents
+        query = `
+        SELECT id, title, document_type, file_name, file_size, 
+               upload_date, processing_status, metadata
+        FROM personal_documents 
+        WHERE patient_id = $1 AND processing_status = 'completed'
+        ORDER BY upload_date DESC
+      `;
+        params = [userId];
+      } else if (userRole === "dentist") {
+        // Dentiste peut voir les documents de ses patients
+        query = `
+        SELECT id, title, document_type, file_name, file_size,
+               upload_date, processing_status, metadata
+        FROM personal_documents 
+        WHERE patient_id = $1 AND dentist_id = $2 AND processing_status = 'completed'
+        ORDER BY upload_date DESC
+      `;
+        params = [patientId, userId];
+      } else if (userRole === "admin") {
+        // Admin peut voir tous les documents
+        query = `
+        SELECT id, title, document_type, file_name, file_size,
+               upload_date, processing_status, metadata
+        FROM personal_documents 
+        WHERE patient_id = $1
+        ORDER BY upload_date DESC
+      `;
+        params = [patientId];
+      } else {
+        return res.status(403).json({
+          success: false,
+          error: "Rôle non autorisé",
+        });
+      }
+
+      const result = await pool.query(query, params);
+      const documents = result.rows;
+
+      console.log(
+        `📄 [DOCS] ${documents.length} documents trouvés pour patient ${patientId}`
+      );
+
+      res.json({
+        success: true,
+        documents: documents,
+        count: documents.length,
+        patientId: patientId,
+      });
+    } catch (error) {
+      console.error("❌ [DOCS] Erreur récupération documents:", error);
+      res.status(500).json({
+        success: false,
+        error: "Erreur lors de la récupération des documents",
+        details: error.message,
+      });
+    }
+  }
+);
+
+// ================================
 // GESTION ERREURS GLOBALES
 // ================================
 
@@ -2387,10 +2548,14 @@ app.use(function (req, res) {
       "GET /api/patients",
       "POST /api/documents/upload",
       "POST /api/chat",
+      "POST /api/chat/warmup",
+      "GET /api/chat/status",
       "GET /api/admin/stats",
       "GET /api/admin/users",
       "GET /api/admin/documents",
       "GET /api/admin/conversations",
+      "GET /api/admin/llm-settings",
+      "GET /api/patients/:id/documents",
       "POST /hooks/deploy",
     ],
   });

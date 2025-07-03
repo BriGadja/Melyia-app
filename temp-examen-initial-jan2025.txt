@@ -1,0 +1,29 @@
+CONSULTATION DENTAIRE - EXAMEN INITIAL
+Date: 15/01/2025
+Patient: patient@melyia.com
+Dentiste: Dr. Martin
+
+ANAMNÈSE:
+- Dernière consultation: il y a 2 ans
+- Douleurs occasionnelles molaire supérieure droite
+- Saignements gingivaux au brossage
+- Sensibilité au froid
+
+EXAMEN CLINIQUE:
+- Dent 16: Carie proximale, restauration nécessaire
+- Dent 21: Légère mobilité, surveillance
+- Gencives: Inflammation légère, gingivite débutante
+- Occlusion: Normale
+- Hygiène bucco-dentaire: Moyenne
+
+PLAN DE TRAITEMENT:
+1. Détartrage prophylactique
+2. Obturation composite dent 16
+3. Instructions d'hygiène renforcées
+4. Contrôle dans 3 mois
+
+RECOMMANDATIONS:
+- Brossage 3x/jour avec dentifrice fluoré
+- Fil dentaire quotidien
+- Bain de bouche antiseptique
+- Éviter sucres entre les repas

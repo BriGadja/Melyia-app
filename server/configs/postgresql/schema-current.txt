@@ -1,118 +1,155 @@
-﻿ schemaname |     tablename      | tableowner  
-------------+--------------------+-------------
- public     | admin_profiles     | postgres
- public     | chat_conversations | postgres
- public     | dentist_profiles   | postgres
- public     | llm_settings       | postgres
- public     | notifications      | melyia_user
- public     | patient_documents  | postgres
- public     | patient_profiles   | postgres
- public     | users              | postgres
- public     | waitlist           | postgres
-(9 rows)
+﻿ schemaname |          tablename           | tableowner  
+------------+------------------------------+-------------
+ public     | admin_profiles               | postgres
+ public     | chat_conversations           | postgres
+ public     | dentist_profiles             | postgres
+ public     | general_documents            | postgres
+ public     | llm_settings                 | postgres
+ public     | notifications                | melyia_user
+ public     | patient_documents_backup_v33 | postgres
+ public     | patient_profiles             | postgres
+ public     | personal_documents           | postgres
+ public     | users                        | postgres
+ public     | waitlist                     | postgres
+(11 rows)
 
-     table_name     |       column_name       |          data_type          | is_nullable 
---------------------+-------------------------+-----------------------------+-------------
- admin_profiles     | id                      | integer                     | NO
- admin_profiles     | user_id                 | integer                     | NO
- admin_profiles     | permissions             | jsonb                       | YES
- admin_profiles     | created_at              | timestamp without time zone | YES
- admin_profiles     | updated_at              | timestamp without time zone | YES
- admin_profiles     | access_level            | character varying           | YES
- admin_stats        | total_users             | bigint                      | YES
- admin_stats        | total_dentists          | bigint                      | YES
- admin_stats        | total_patients          | bigint                      | YES
- admin_stats        | total_admins            | bigint                      | YES
- admin_stats        | total_documents         | bigint                      | YES
- admin_stats        | total_conversations     | bigint                      | YES
- admin_stats        | active_users            | bigint                      | YES
- admin_stats        | disk_usage_mb           | integer                     | YES
- admin_stats        | last_updated            | timestamp with time zone    | YES
- chat_conversations | id                      | integer                     | NO
- chat_conversations | patient_id              | integer                     | YES
- chat_conversations | dentist_id              | integer                     | YES
- chat_conversations | session_id              | character varying           | YES
- chat_conversations | message                 | text                        | NO
- chat_conversations | response                | text                        | NO
- chat_conversations | context_documents       | ARRAY                       | YES
- chat_conversations | confidence_score        | double precision            | YES
- chat_conversations | response_time_ms        | integer                     | YES
- chat_conversations | feedback_rating         | integer                     | YES
- chat_conversations | feedback_comment        | text                        | YES
- chat_conversations | created_at              | timestamp without time zone | YES
- dentist_profiles   | id                      | integer                     | NO
- dentist_profiles   | user_id                 | integer                     | YES
- dentist_profiles   | practice_name           | character varying           | YES
- dentist_profiles   | specializations         | ARRAY                       | YES
- dentist_profiles   | subscription_type       | character varying           | YES
- dentist_profiles   | max_patients            | integer                     | YES
- dentist_profiles   | created_at              | timestamp without time zone | YES
- llm_settings       | id                      | integer                     | NO
- llm_settings       | system_prompt           | text                        | YES
- llm_settings       | system_prompt_urgence   | text                        | YES
- llm_settings       | temperature             | double precision            | YES
- llm_settings       | top_p                   | double precision            | YES
- llm_settings       | max_tokens              | integer                     | YES
- llm_settings       | num_ctx                 | integer                     | YES
- llm_settings       | stop_sequences          | ARRAY                       | YES
- llm_settings       | keep_alive_minutes      | integer                     | YES
- llm_settings       | timeout_seconds         | integer                     | YES
- llm_settings       | model_name              | character varying           | YES
- llm_settings       | created_at              | timestamp without time zone | YES
- llm_settings       | updated_at              | timestamp without time zone | YES
- notifications      | id                      | integer                     | NO
- notifications      | user_id                 | integer                     | YES
- notifications      | sender_id               | integer                     | YES
- notifications      | notification_type       | character varying           | YES
- notifications      | content                 | text                        | NO
- notifications      | link                    | character varying           | YES
- notifications      | priority                | character varying           | YES
- notifications      | is_read                 | boolean                     | YES
- notifications      | read_at                 | timestamp without time zone | YES
- notifications      | created_at              | timestamp without time zone | YES
- notifications      | updated_at              | timestamp without time zone | YES
- patient_documents  | id                      | integer                     | NO
- patient_documents  | patient_id              | integer                     | YES
- patient_documents  | dentist_id              | integer                     | YES
- patient_documents  | document_type           | character varying           | NO
- patient_documents  | title                   | character varying           | NO
- patient_documents  | content                 | text                        | NO
- patient_documents  | embedding               | USER-DEFINED                | YES
- patient_documents  | metadata                | jsonb                       | YES
- patient_documents  | file_path               | character varying           | YES
- patient_documents  | file_name               | character varying           | YES
- patient_documents  | file_size               | integer                     | YES
- patient_documents  | mime_type               | character varying           | YES
- patient_documents  | upload_date             | timestamp without time zone | YES
- patient_documents  | processing_status       | character varying           | YES
- patient_documents  | created_at              | timestamp without time zone | YES
- patient_documents  | updated_at              | timestamp without time zone | YES
- patient_profiles   | id                      | integer                     | NO
- patient_profiles   | user_id                 | integer                     | YES
- patient_profiles   | dentist_id              | integer                     | YES
- patient_profiles   | birth_date              | date                        | YES
- patient_profiles   | emergency_contact       | character varying           | YES
- patient_profiles   | data_processing_consent | boolean                     | YES
- patient_profiles   | created_at              | timestamp without time zone | YES
- users              | id                      | integer                     | NO
- users              | email                   | character varying           | NO
- users              | password_hash           | character varying           | NO
- users              | first_name              | character varying           | NO
- users              | last_name               | character varying           | NO
- users              | phone                   | character varying           | YES
- users              | role                    | character varying           | NO
- users              | is_active               | boolean                     | YES
- users              | email_verified          | boolean                     | YES
- users              | last_login              | timestamp without time zone | YES
- users              | created_at              | timestamp without time zone | YES
- users              | updated_at              | timestamp without time zone | YES
- waitlist           | id                      | integer                     | NO
- waitlist           | first_name              | character varying           | NO
- waitlist           | last_name               | character varying           | NO
- waitlist           | email                   | character varying           | NO
- waitlist           | phone                   | character varying           | NO
- waitlist           | practice_name           | character varying           | YES
- waitlist           | comments                | text                        | YES
- waitlist           | created_at              | timestamp without time zone | YES
-(101 rows)
+          table_name          |       column_name       |          data_type          | is_nullable 
+------------------------------+-------------------------+-----------------------------+-------------
+ admin_profiles               | id                      | integer                     | NO
+ admin_profiles               | user_id                 | integer                     | NO
+ admin_profiles               | permissions             | jsonb                       | YES
+ admin_profiles               | created_at              | timestamp without time zone | YES
+ admin_profiles               | updated_at              | timestamp without time zone | YES
+ admin_profiles               | access_level            | character varying           | YES
+ admin_stats                  | total_users             | bigint                      | YES
+ admin_stats                  | total_dentists          | bigint                      | YES
+ admin_stats                  | total_patients          | bigint                      | YES
+ admin_stats                  | total_admins            | bigint                      | YES
+ admin_stats                  | total_documents         | bigint                      | YES
+ admin_stats                  | total_conversations     | bigint                      | YES
+ admin_stats                  | active_users            | bigint                      | YES
+ admin_stats                  | disk_usage_mb           | integer                     | YES
+ admin_stats                  | last_updated            | timestamp with time zone    | YES
+ chat_conversations           | id                      | integer                     | NO
+ chat_conversations           | patient_id              | integer                     | YES
+ chat_conversations           | dentist_id              | integer                     | YES
+ chat_conversations           | session_id              | character varying           | YES
+ chat_conversations           | message                 | text                        | NO
+ chat_conversations           | response                | text                        | NO
+ chat_conversations           | context_documents       | ARRAY                       | YES
+ chat_conversations           | confidence_score        | double precision            | YES
+ chat_conversations           | response_time_ms        | integer                     | YES
+ chat_conversations           | feedback_rating         | integer                     | YES
+ chat_conversations           | feedback_comment        | text                        | YES
+ chat_conversations           | created_at              | timestamp without time zone | YES
+ dentist_profiles             | id                      | integer                     | NO
+ dentist_profiles             | user_id                 | integer                     | YES
+ dentist_profiles             | practice_name           | character varying           | YES
+ dentist_profiles             | specializations         | ARRAY                       | YES
+ dentist_profiles             | subscription_type       | character varying           | YES
+ dentist_profiles             | max_patients            | integer                     | YES
+ dentist_profiles             | created_at              | timestamp without time zone | YES
+ documents_statistics         | document_level          | text                        | YES
+ documents_statistics         | total_documents         | bigint                      | YES
+ documents_statistics         | total_size              | bigint                      | YES
+ documents_statistics         | avg_size                | numeric                     | YES
+ general_documents            | id                      | integer                     | NO
+ general_documents            | title                   | character varying           | NO
+ general_documents            | file_name               | character varying           | NO
+ general_documents            | file_path               | character varying           | NO
+ general_documents            | file_type               | character varying           | NO
+ general_documents            | file_size               | integer                     | NO
+ general_documents            | content                 | text                        | YES
+ general_documents            | embedding               | USER-DEFINED                | YES
+ general_documents            | document_type           | character varying           | NO
+ general_documents            | category                | character varying           | NO
+ general_documents            | uploaded_by             | integer                     | YES
+ general_documents            | processing_status       | character varying           | YES
+ general_documents            | metadata                | jsonb                       | YES
+ general_documents            | created_at              | timestamp without time zone | YES
+ general_documents            | updated_at              | timestamp without time zone | YES
+ llm_settings                 | id                      | integer                     | NO
+ llm_settings                 | system_prompt           | text                        | YES
+ llm_settings                 | system_prompt_urgence   | text                        | YES
+ llm_settings                 | temperature             | double precision            | YES
+ llm_settings                 | top_p                   | double precision            | YES
+ llm_settings                 | max_tokens              | integer                     | YES
+ llm_settings                 | num_ctx                 | integer                     | YES
+ llm_settings                 | stop_sequences          | ARRAY                       | YES
+ llm_settings                 | keep_alive_minutes      | integer                     | YES
+ llm_settings                 | timeout_seconds         | integer                     | YES
+ llm_settings                 | model_name              | character varying           | YES
+ llm_settings                 | created_at              | timestamp without time zone | YES
+ llm_settings                 | updated_at              | timestamp without time zone | YES
+ notifications                | id                      | integer                     | NO
+ notifications                | user_id                 | integer                     | YES
+ notifications                | sender_id               | integer                     | YES
+ notifications                | notification_type       | character varying           | YES
+ notifications                | content                 | text                        | NO
+ notifications                | link                    | character varying           | YES
+ notifications                | priority                | character varying           | YES
+ notifications                | is_read                 | boolean                     | YES
+ notifications                | read_at                 | timestamp without time zone | YES
+ notifications                | created_at              | timestamp without time zone | YES
+ notifications                | updated_at              | timestamp without time zone | YES
+ patient_documents_backup_v33 | id                      | integer                     | YES
+ patient_documents_backup_v33 | patient_id              | integer                     | YES
+ patient_documents_backup_v33 | dentist_id              | integer                     | YES
+ patient_documents_backup_v33 | document_type           | character varying           | YES
+ patient_documents_backup_v33 | title                   | character varying           | YES
+ patient_documents_backup_v33 | content                 | text                        | YES
+ patient_documents_backup_v33 | embedding               | USER-DEFINED                | YES
+ patient_documents_backup_v33 | metadata                | jsonb                       | YES
+ patient_documents_backup_v33 | file_path               | character varying           | YES
+ patient_documents_backup_v33 | file_name               | character varying           | YES
+ patient_documents_backup_v33 | file_size               | integer                     | YES
+ patient_documents_backup_v33 | mime_type               | character varying           | YES
+ patient_documents_backup_v33 | upload_date             | timestamp without time zone | YES
+ patient_documents_backup_v33 | processing_status       | character varying           | YES
+ patient_documents_backup_v33 | created_at              | timestamp without time zone | YES
+ patient_documents_backup_v33 | updated_at              | timestamp without time zone | YES
+ patient_profiles             | id                      | integer                     | NO
+ patient_profiles             | user_id                 | integer                     | YES
+ patient_profiles             | dentist_id              | integer                     | YES
+ patient_profiles             | birth_date              | date                        | YES
+ patient_profiles             | emergency_contact       | character varying           | YES
+ patient_profiles             | data_processing_consent | boolean                     | YES
+ patient_profiles             | created_at              | timestamp without time zone | YES
+ personal_documents           | id                      | integer                     | NO
+ personal_documents           | patient_id              | integer                     | YES
+ personal_documents           | dentist_id              | integer                     | YES
+ personal_documents           | document_type           | character varying           | NO
+ personal_documents           | title                   | character varying           | NO
+ personal_documents           | content                 | text                        | NO
+ personal_documents           | embedding               | USER-DEFINED                | YES
+ personal_documents           | metadata                | jsonb                       | YES
+ personal_documents           | file_path               | character varying           | YES
+ personal_documents           | file_name               | character varying           | YES
+ personal_documents           | file_size               | integer                     | YES
+ personal_documents           | mime_type               | character varying           | YES
+ personal_documents           | upload_date             | timestamp without time zone | YES
+ personal_documents           | processing_status       | character varying           | YES
+ personal_documents           | created_at              | timestamp without time zone | YES
+ personal_documents           | updated_at              | timestamp without time zone | YES
+ users                        | id                      | integer                     | NO
+ users                        | email                   | character varying           | NO
+ users                        | password_hash           | character varying           | NO
+ users                        | first_name              | character varying           | NO
+ users                        | last_name               | character varying           | NO
+ users                        | phone                   | character varying           | YES
+ users                        | role                    | character varying           | NO
+ users                        | is_active               | boolean                     | YES
+ users                        | email_verified          | boolean                     | YES
+ users                        | last_login              | timestamp without time zone | YES
+ users                        | created_at              | timestamp without time zone | YES
+ users                        | updated_at              | timestamp without time zone | YES
+ waitlist                     | id                      | integer                     | NO
+ waitlist                     | first_name              | character varying           | NO
+ waitlist                     | last_name               | character varying           | NO
+ waitlist                     | email                   | character varying           | NO
+ waitlist                     | phone                   | character varying           | NO
+ waitlist                     | practice_name           | character varying           | YES
+ waitlist                     | comments                | text                        | YES
+ waitlist                     | created_at              | timestamp without time zone | YES
+(136 rows)
 
