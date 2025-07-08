@@ -1,0 +1,175 @@
+{
+  "timestamp": "2025-07-08T07:20:06.204Z",
+  "sites": {
+    "landing": {
+      "success": true,
+      "status": 200,
+      "size": "449",
+      "validations": [
+        {
+          "test": true,
+          "name": "HTML Title présent"
+        },
+        {
+          "test": true,
+          "name": "Contenu Melyia présent"
+        },
+        {
+          "test": true,
+          "name": "Taille suffisante"
+        }
+      ],
+      "content": "<!DOCTYPE html>\n<html>\n  <head>\n    <title>Melyia - Assistant IA Dentaire</title>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <script ..."
+    },
+    "app": {
+      "success": true,
+      "status": 200,
+      "size": "876",
+      "validations": [
+        {
+          "test": true,
+          "name": "React root présent"
+        },
+        {
+          "test": true,
+          "name": "Status HTTP OK"
+        },
+        {
+          "test": true,
+          "name": "Taille suffisante"
+        }
+      ],
+      "content": "<!DOCTYPE html>\n<html lang=\"fr\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Melyia - Assistant IA Dentaire</title>\n  ..."
+    }
+  },
+  "api": {
+    "endpoints": [
+      {
+        "endpoint": "/health",
+        "name": "Health Check",
+        "success": true,
+        "status": 200,
+        "requiresAuth": false
+      },
+      {
+        "endpoint": "/auth/profile",
+        "name": "User Profile",
+        "success": false,
+        "status": 404,
+        "requiresAuth": true
+      },
+      {
+        "endpoint": "/admin/users",
+        "name": "Admin Users",
+        "success": true,
+        "status": 200,
+        "requiresAuth": true
+      },
+      {
+        "endpoint": "/admin/dashboard",
+        "name": "Admin Dashboard",
+        "success": false,
+        "status": 404,
+        "requiresAuth": true
+      }
+    ],
+    "authSuccess": true
+  },
+  "system": {
+    "nginx": {
+      "status": "active",
+      "enabled": "enabled",
+      "ok": true
+    },
+    "pm2": {
+      "status": "online",
+      "ok": true
+    },
+    "postgresql": {
+      "status": "active",
+      "ok": true
+    },
+    "disk": {
+      "usage": 39,
+      "ok": true
+    }
+  },
+  "git": {
+    "branch": "main",
+    "commit": "f1894289",
+    "hasChanges": true,
+    "githubConnected": true,
+    "remotes": 1
+  },
+  "files": {
+    "structure": [
+      {
+        "file": "package.json",
+        "name": "Package Config",
+        "exists": true,
+        "size": 7832,
+        "isDirectory": false,
+        "sizeOk": true,
+        "typeOk": true,
+        "valid": true
+      },
+      {
+        "file": "server/backend/server.js",
+        "name": "Backend Server",
+        "exists": true,
+        "size": 80628,
+        "isDirectory": false,
+        "sizeOk": true,
+        "typeOk": true,
+        "valid": true
+      },
+      {
+        "file": ".github/workflows/deploy.yml",
+        "name": "GitHub Actions",
+        "exists": true,
+        "size": 2272,
+        "isDirectory": false,
+        "sizeOk": true,
+        "typeOk": true,
+        "valid": true
+      },
+      {
+        "file": "client",
+        "name": "Client Directory",
+        "exists": true,
+        "size": "directory",
+        "isDirectory": true,
+        "sizeOk": true,
+        "typeOk": true,
+        "valid": true
+      },
+      {
+        "file": "audit",
+        "name": "Audit Directory",
+        "exists": true,
+        "size": "directory",
+        "isDirectory": true,
+        "sizeOk": true,
+        "typeOk": true,
+        "valid": true
+      },
+      {
+        "file": "deploy-from-server-git.sh",
+        "name": "Deploy Script",
+        "exists": true,
+        "size": 4956,
+        "isDirectory": false,
+        "sizeOk": true,
+        "typeOk": true,
+        "valid": true
+      }
+    ]
+  },
+  "overall": {
+    "sites": true,
+    "api": true,
+    "system": true,
+    "files": true,
+    "git": true
+  }
+}

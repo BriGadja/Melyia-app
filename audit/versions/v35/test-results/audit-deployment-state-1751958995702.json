@@ -1,0 +1,73 @@
+{
+  "timestamp": "2025-07-08T07:16:34.746Z",
+  "environment": {},
+  "sites": {
+    "landing": {
+      "success": true,
+      "status": 200,
+      "size": "449"
+    },
+    "app": {
+      "success": true,
+      "status": 200,
+      "size": "876"
+    }
+  },
+  "api": {
+    "endpoints": [
+      {
+        "endpoint": "/health",
+        "success": true,
+        "status": 200
+      },
+      {
+        "endpoint": "/auth/profile",
+        "success": true,
+        "status": 404
+      },
+      {
+        "endpoint": "/admin/users",
+        "success": true,
+        "status": 200
+      }
+    ]
+  },
+  "server": {
+    "nginx": "active",
+    "pm2": "│ \u001b[1m\u001b[36m10\u001b[39m\u001b[22m │ melyia-auth-dev    │ default     │ 1.0.0   │ \u001b[7m\u001b[1mfork\u001b[22m\u001b[27m    │ 3477822  │ 12h    │ 164  │ \u001b[32m\u001b[1monline\u001b[22m\u001b[39m    │ 0%       │ 68.9mb   │ \u001b[1mubuntu\u001b[22m   │ \u001b[90mdisabled\u001b[39m │",
+    "disk": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda1        48G   19G   30G  39% /\n"
+  },
+  "git": {
+    "branch": "main",
+    "commit": "f18942893496e3b3b9f9d8c36b11cf67ea3d7628",
+    "status": "?? deploy-direct.sh\n?? test-deployment-audit.mjs",
+    "lastCommit": "f189428 - Fix: Correction encodage PowerShell script sync-local-to-remote (Brice Gachadoat)"
+  },
+  "files": [
+    {
+      "file": "package.json",
+      "exists": true,
+      "size": "8 KB"
+    },
+    {
+      "file": "server/backend/server.js",
+      "exists": true,
+      "size": "79 KB"
+    },
+    {
+      "file": ".github/workflows/deploy.yml",
+      "exists": true,
+      "size": "2 KB"
+    },
+    {
+      "file": "client",
+      "exists": true,
+      "size": "directory"
+    },
+    {
+      "file": "audit",
+      "exists": true,
+      "size": "directory"
+    }
+  ]
+}
