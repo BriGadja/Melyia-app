@@ -157,11 +157,14 @@ const AppRoutes: React.FC = () => {
   );
 };
 
+import VersionInfo from "./components/VersionInfo";
+
 // Composant App principal avec Provider
 const App: React.FC = () => {
   return (
     <AuthProvider>
       <AppRoutes />
+      <VersionInfo />
     </AuthProvider>
   );
 };

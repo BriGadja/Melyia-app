@@ -1,0 +1,146 @@
+# Configuration SSH Melyia - Multi-Machines + Remote-SSH Optimisé
+# Mise à jour : 2025-01-27 - Optimisations Remote-SSH ajoutées
+
+# =============================================================================
+# CONFIGURATION PRINCIPALE REMOTE-SSH (RECOMMANDÉE POUR VS CODE)
+# =============================================================================
+Host melyia-remote
+    HostName 51.91.145.255
+    User ubuntu
+    Port 22
+    IdentityFile ~/.ssh/melyia_main
+    
+    # Optimisations Remote-SSH spécifiques
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+    ConnectTimeout 60
+    TCPKeepAlive yes
+    Compression yes
+    
+    # Performance VS Code Remote
+    ControlMaster auto
+    ControlPath ~/.ssh/control-melyia-%r@%h:%p
+    ControlPersist 10m
+    
+    # Sécurité
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts
+    PreferredAuthentications publickey
+    ForwardAgent yes
+    LogLevel ERROR
+
+# =============================================================================
+# CONFIGURATIONS EXISTANTES OPTIMISÉES
+# =============================================================================
+
+# MELYIA BACKEND - Configuration PC Fixe (OPTIMISÉE)
+Host melyia-backend
+    HostName 51.91.145.255
+    User ubuntu
+    Port 22
+    IdentityFile ~/.ssh/melyia_main
+    
+    # Optimisations anti-timeout ajoutées
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+    ConnectTimeout 60
+    TCPKeepAlive yes
+    Compression yes
+    
+    # Configuration originale conservée
+    ForwardAgent yes
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts
+    LogLevel INFO
+
+# MELYIA BACKEND - Configuration Portable (OPTIMISÉE)
+Host melyia-portable
+    HostName 51.91.145.255
+    User ubuntu
+    Port 22
+    IdentityFile ~/.ssh/melyia_portable
+    
+    # Optimisations anti-timeout ajoutées
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
+    ConnectTimeout 60
+    TCPKeepAlive yes
+    Compression yes
+    
+    # Configuration originale conservée
+    ForwardAgent yes
+    StrictHostKeyChecking accept-new
+    UserKnownHostsFile ~/.ssh/known_hosts
+    LogLevel INFO
+
+# =============================================================================
+# RACCOURCIS UTILES OPTIMISÉS
+# =============================================================================
+
+# Monitoring rapide (OPTIMISÉ)
+Host melyia-monitor
+    HostName 51.91.145.255
+    User ubuntu
+    Port 22
+    IdentityFile ~/.ssh/melyia_main
+    
+    # Optimisations ajoutées
+    ServerAliveInterval 30
+    ConnectTimeout 30
+    Compression yes
+    
+    # Commande originale conservée
+    RemoteCommand ./melyia-monitor.sh
+    RequestTTY yes
+
+# Logs en temps réel (OPTIMISÉ)
+Host melyia-logs
+    HostName 51.91.145.255
+    User ubuntu
+    Port 22
+    IdentityFile ~/.ssh/melyia_main
+    
+    # Optimisations ajoutées
+    ServerAliveInterval 30
+    ConnectTimeout 30
+    Compression yes
+    
+    # Commande originale conservée
+    RemoteCommand "tail -f /var/log/nginx/access.log | grep melyia"
+    RequestTTY yes
+
+# =============================================================================
+# NOUVEAUX RACCOURCIS UTILES POUR DÉVELOPPEMENT
+# =============================================================================
+
+# Accès rapide dossier web
+Host melyia-web
+    HostName 51.91.145.255
+    User ubuntu
+    Port 22
+    IdentityFile ~/.ssh/melyia_main
+    ServerAliveInterval 30
+    ConnectTimeout 30
+    Compression yes
+    RemoteCommand "cd /var/www/melyia && bash"
+    RequestTTY yes
+
+# Status complet du serveur
+Host melyia-status
+    HostName 51.91.145.255
+    User ubuntu
+    Port 22
+    IdentityFile ~/.ssh/melyia_main
+    ServerAliveInterval 30
+    ConnectTimeout 30
+    Compression yes
+    RemoteCommand "echo '=== NGINX ===' && sudo systemctl status nginx --no-pager && echo -e '\n=== PM2 ===' && pm2 status && echo -e '\n=== DISK ===' && df -h"
+    RequestTTY yes
+
+# =============================================================================
+# CONFIGURATION GLOBALE OPTIMISÉE
+# =============================================================================
+Host *
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+    HashKnownHosts yes 

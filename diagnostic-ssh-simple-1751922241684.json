@@ -1,0 +1,42 @@
+{
+  "summary": {
+    "totalTests": 5,
+    "successfulTests": 5,
+    "failedTests": 0
+  },
+  "tests": [
+    {
+      "name": "Connectivité SSH",
+      "success": true,
+      "duration": 0.8,
+      "result": "SSH-CONNECTIVITY-OK"
+    },
+    {
+      "name": "Informations système",
+      "success": true,
+      "duration": 0.3,
+      "result": "Mon Jul  7 23:04:00 CEST 2025\n 23:04:00 up 39 days,  7:17,  7 users,  load average: 0.10, 0.07, 0.01\nubuntu"
+    },
+    {
+      "name": "Permissions web",
+      "success": true,
+      "duration": 0.4,
+      "result": "total 216\ndrwxr-xr-x 27 ubuntu   ubuntu    4096 Jul  7 21:27 .\ndrwxr-xr-x  5 root     root      4096 Jun  7 17:35 .."
+    },
+    {
+      "name": "Espace disque",
+      "success": true,
+      "duration": 0.3,
+      "result": "/dev/sda1        48G   18G   30G  38% /"
+    },
+    {
+      "name": "Services web",
+      "success": true,
+      "duration": 0.8,
+      "result": "active"
+    }
+  ],
+  "recommendations": [
+    "Tous les tests sont passés - SSH optimisé prêt"
+  ]
+}

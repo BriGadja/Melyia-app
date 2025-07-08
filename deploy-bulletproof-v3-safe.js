@@ -9,9 +9,9 @@ const CONFIG = {
   SSH: {
     user: "ubuntu",
     host: "51.91.145.255",
-    connectTimeout: 60,
-    execTimeout: 180000, // 3 minutes
-    safeDelay: 30000, // 30 secondes entre connexions SSH
+    connectTimeout: 30,
+    execTimeout: 120000, // 2 minutes
+    safeDelay: 2000, // 2 secondes seulement
   },
   PATHS: {
     landing: {
@@ -46,16 +46,17 @@ function debugLog(message, data = null) {
   }
 }
 
-function safeDelay(description = "Protection anti-brute force") {
-  const delaySeconds = CONFIG.SSH.safeDelay / 1000;
-  log(`⏳ ${description} - Pause sécurisée ${delaySeconds}s...`, "yellow");
+function safeDelay(description = "Pause courte") {
+  // MODIFICATION: Suppression protection anti-brute force pour déploiement rapide
+  const delaySeconds = 2; // Réduit de 30s à 2s
+  log(`⏳ ${description} - Pause technique ${delaySeconds}s...`, "yellow");
 
   const startTime = Date.now();
-  while (Date.now() - startTime < CONFIG.SSH.safeDelay) {
-    // Pause active pour éviter le brute force
+  while (Date.now() - startTime < 2000) {
+    // Pause technique minimale
   }
 
-  log(`✅ Pause terminée - SSH sécurisé`, "green");
+  log(`✅ Pause terminée`, "green");
 }
 
 function executeSSH(command, description, timeout = CONFIG.SSH.execTimeout) {
@@ -258,10 +259,41 @@ function deployApp() {
   log("✅ Application V3-SAFE déployée: https://app-dev.melyia.com", "green");
 }
 
+function fixPermissions() {
+  log("🛠️ CORRECTION PERMISSIONS AUTOMATIQUE", "blue");
+  log("=====================================", "blue");
+
+  const sshCmd = `ssh -o ConnectTimeout=${CONFIG.SSH.connectTimeout} -o ServerAliveInterval=60 ${CONFIG.SSH.user}@${CONFIG.SSH.host}`;
+
+  try {
+    // Correction permissions assets (solution éprouvée v30/v33)
+    const fixCommands = [
+      "sudo chmod 755 /var/www/melyia/app-dev/assets",
+      "sudo chmod 644 /var/www/melyia/app-dev/assets/*",
+      "sudo chown -R www-data:www-data /var/www/melyia/app-dev/assets",
+      "ls -la /var/www/melyia/app-dev/assets/",
+      'echo "Permissions assets corrigées"',
+    ].join(" && ");
+
+    executeSSH(
+      `${sshCmd} "${fixCommands}"`,
+      "Correction permissions assets définitive",
+      60000
+    );
+
+    log("✅ Permissions assets corrigées (755/644 + www-data)", "green");
+    return true;
+  } catch (error) {
+    log("⚠️ Correction permissions partielle", "yellow");
+    debugLog("Erreur permissions", error.message);
+    return false;
+  }
+}
+
 function validateDeployment() {
   log("🔍 Validation V3-SAFE...", "blue");
 
-  // Pause sécurisée avant validation
+  // Pause technique courte
   safeDelay("Avant validation finale");
 
   try {
@@ -286,10 +318,10 @@ function validateDeployment() {
 function main() {
   const startTime = Date.now();
 
-  log("🚀 DÉPLOIEMENT BULLETPROOF V3-SAFE", "green");
-  log("===================================", "cyan");
-  log("🛡️ Protection anti-brute force SSH intégrée", "yellow");
-  log("⏳ Espacement sécurisé entre connexions", "yellow");
+  log("🚀 DÉPLOIEMENT BULLETPROOF V3-SAFE OPTIMISÉ", "green");
+  log("==========================================", "cyan");
+  log("⚡ Déploiement rapide sans protection brute force", "yellow");
+  log("🛠️ Correction automatique permissions CSS/JS", "yellow");
 
   debugLog("Configuration V3-SAFE", {
     node: process.version,
@@ -304,10 +336,13 @@ function main() {
     testConnectivity();
     validateBuilds();
 
-    // Déploiement ultra-sécurisé
-    log("🔄 Déploiement V3-SAFE avec espacement sécurisé...", "cyan");
+    // Déploiement rapide optimisé
+    log("🔄 Déploiement V3-SAFE optimisé...", "cyan");
     deployLanding();
     deployApp();
+
+    // Correction automatique permissions (résolution v30/v33)
+    fixPermissions();
 
     // Validation finale
     validateDeployment();
@@ -318,8 +353,8 @@ function main() {
     log(`🎉 DÉPLOIEMENT V3-SAFE RÉUSSI en ${duration}s`, "green");
     log("📍 Landing: https://dev.melyia.com", "white");
     log("📍 App: https://app-dev.melyia.com", "white");
-    log("🛡️ Protection anti-brute force respectée", "yellow");
-    log("🚀 V3-SAFE: 100% compatible serveurs sécurisés", "yellow");
+    log("⚡ Déploiement rapide optimisé", "yellow");
+    log("🛠️ Permissions CSS/JS automatiquement corrigées", "yellow");
     log("🔧 Backend automatiquement préservé", "white");
   } catch (error) {
     log("===================================", "cyan");

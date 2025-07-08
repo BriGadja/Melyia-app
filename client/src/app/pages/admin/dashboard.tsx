@@ -50,13 +50,15 @@ import {
   type LLMConfig,
 } from "../../services/admin-api";
 import { useToast } from "@shared/hooks/use-toast";
+import { AdminDocumentUpload } from "../../components/upload/AdminDocumentUpload";
 
 type ActiveSection =
   | "overview"
   | "users"
   | "documents"
   | "conversations"
-  | "llm-config";
+  | "llm-config"
+  | "upload-documents";
 
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
@@ -204,6 +206,14 @@ const AdminDashboard: React.FC = () => {
       description: "Configuration LLM",
       gradient: "from-indigo-500 to-purple-400",
       bgGradient: "from-indigo-50 to-purple-50",
+    },
+    {
+      id: "upload-documents" as ActiveSection,
+      label: "Upload Documents",
+      icon: "📁",
+      description: "Gestion upload fichiers",
+      gradient: "from-pink-500 to-rose-400",
+      bgGradient: "from-pink-50 to-rose-50",
     },
   ];
 
@@ -1171,6 +1181,41 @@ const AdminDashboard: React.FC = () => {
     );
   };
 
+  const renderUploadDocumentsSection = () => (
+    <div className="h-full flex flex-col">
+      {/* En-tête section */}
+      <div className="flex-shrink-0 bg-gradient-to-r from-pink-50 via-white to-rose-50 backdrop-blur-sm p-8 border-b border-pink-100">
+        <div className="flex justify-between items-center">
+          <div className="space-y-2">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-400 flex items-center justify-center text-white text-xl shadow-lg">
+                📁
+              </div>
+              <h2 className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-rose-500 bg-clip-text text-transparent">
+                Upload Documents
+              </h2>
+            </div>
+            <p className="text-gray-600 ml-13">
+              Gestion complète de l'upload de documents généraux et personnels
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Interface d'upload */}
+      <div className="flex-1 overflow-y-auto p-6 bg-gradient-to-br from-gray-50 to-pink-50/30">
+        <AdminDocumentUpload
+          onUploadComplete={() => {
+            toast({
+              title: "Upload terminé",
+              description: "Les documents ont été uploadés avec succès !",
+            });
+          }}
+        />
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 to-gray-100">
       {/* Header moderne avec glassmorphism */}
@@ -1283,6 +1328,8 @@ const AdminDashboard: React.FC = () => {
             {activeSection === "documents" && renderDocumentsSection()}
             {activeSection === "conversations" && renderConversationsSection()}
             {activeSection === "llm-config" && renderLLMConfigSection()}
+            {activeSection === "upload-documents" &&
+              renderUploadDocumentsSection()}
           </div>
         </main>
       </div>

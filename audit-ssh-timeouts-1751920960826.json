@@ -1,0 +1,118 @@
+{
+  "timestamp": "2025-07-07T20:42:40.826Z",
+  "config": {
+    "SSH": {
+      "user": "ubuntu",
+      "host": "51.91.145.255",
+      "keyPath": "C:\\Users\\pc\\.ssh\\melyia_main"
+    },
+    "TESTS": {
+      "connectTimeout": 30,
+      "execTimeout": 60000,
+      "maxRetries": 3
+    }
+  },
+  "results": {
+    "connectivity": {
+      "ping": {
+        "success": true,
+        "duration": 3064,
+        "output": "\r\nEnvoi d'une requ�te 'Ping'  51.91.145.255 avec 32 octets de donn�es�:\r\nR�ponse de 51.91.145.255�: octets=32 temps=11 ms TTL=50\r\nR�ponse de 51.91.145.255�: octets=32 temps=11 ms TTL=50\r\nR�ponse de 51.91.145.255�: octets=32 temps=10 ms TTL=50\r\nR�ponse de 51.91.145.255�: octets=32 temps=10 ms TTL=50\r\n\r\nStatistiques Ping pour 51.91.145.255:\r\n    Paquets�: envoy�s = 4, re�us = 4, perdus = 0 (perte 0%),\r\nDur�e approximative des boucles en millisecondes :\r\n    Minimum = 10ms, Maximum = 11ms, Moyenne = 10ms\r\n"
+      },
+      "port": {
+        "success": true,
+        "duration": 13650,
+        "output": "\r\n\r\nComputerName     : 51.91.145.255\r\nRemoteAddress    : 51.91.145.255\r\nRemotePort       : 22\r\nInterfaceAlias   : Ethernet\r\nSourceAddress    : 192.168.1.169\r\nTcpTestSucceeded : True\r\n\r\n\r\n\r\n"
+      }
+    },
+    "auth": {
+      "keyAuth": {
+        "success": true,
+        "duration": 356,
+        "output": "SSH-KEY-OK\n"
+      },
+      "agentAuth": {
+        "success": true,
+        "duration": 358,
+        "output": "SSH-AGENT-OK\n"
+      }
+    },
+    "performance": {
+      "simpleCommand": {
+        "success": true,
+        "duration": 356,
+        "output": "Hello World\n"
+      },
+      "systemCommand": {
+        "success": false,
+        "duration": 21081,
+        "error": "Command failed: ssh -o ConnectTimeout=30 -o BatchMode=yes -i \"C:\\Users\\pc\\.ssh\\melyia_main\" ubuntu@51.91.145.255 \"uptime && free -h && df -h\"\nbanner exchange: Connection to UNKNOWN port -1: Connection timed out\r\n",
+        "exitCode": 255,
+        "signal": null
+      },
+      "longCommand": {
+        "success": false,
+        "duration": 21087,
+        "error": "Command failed: ssh -o ConnectTimeout=30 -o BatchMode=yes -i \"C:\\Users\\pc\\.ssh\\melyia_main\" ubuntu@51.91.145.255 \"find /var/www -name '*.js' -o -name '*.html' | head -20\"\nbanner exchange: Connection to UNKNOWN port -1: Connection timed out\r\n",
+        "exitCode": 255,
+        "signal": null
+      }
+    },
+    "transfer": {
+      "upload": {
+        "success": false,
+        "duration": 21085,
+        "error": "Command failed: scp -o ConnectTimeout=30 -o BatchMode=yes -i \"C:\\Users\\pc\\.ssh\\melyia_main\" ./test-ssh-transfer.txt ubuntu@51.91.145.255:/tmp/test-upload.txt\nbanner exchange: Connection to UNKNOWN port -1: Connection timed out\r\nscp: Connection closed\r\n",
+        "exitCode": 255,
+        "signal": null
+      },
+      "download": {
+        "success": false,
+        "duration": 21081,
+        "error": "Command failed: scp -o ConnectTimeout=30 -o BatchMode=yes -i \"C:\\Users\\pc\\.ssh\\melyia_main\" ubuntu@51.91.145.255:/tmp/test-upload.txt ./test-download.txt\nbanner exchange: Connection to UNKNOWN port -1: Connection timed out\r\nscp: Connection closed\r\n",
+        "exitCode": 255,
+        "signal": null
+      }
+    },
+    "deployment": {
+      "groupedCommand": {
+        "success": false,
+        "duration": 21050,
+        "error": "Command failed: ssh -o ConnectTimeout=30 -o BatchMode=yes -i \"C:\\Users\\pc\\.ssh\\melyia_main\" ubuntu@51.91.145.255 \"mkdir -p /tmp/test-deploy && echo 'Phase 1 OK' && ls -la /tmp/test-deploy && echo 'Phase 2 OK' && rm -rf /tmp/test-deploy && echo 'Phase 3 OK'\"\nbanner exchange: Connection to UNKNOWN port -1: Connection timed out\r\n",
+        "exitCode": 255,
+        "signal": null
+      },
+      "sudoCommand": {
+        "success": false,
+        "duration": 21066,
+        "error": "Command failed: ssh -o ConnectTimeout=30 -o BatchMode=yes -i \"C:\\Users\\pc\\.ssh\\melyia_main\" ubuntu@51.91.145.255 \"sudo mkdir -p /tmp/test-sudo && sudo chown ubuntu:ubuntu /tmp/test-sudo && sudo rm -rf /tmp/test-sudo\"\nbanner exchange: Connection to UNKNOWN port -1: Connection timed out\r\n",
+        "exitCode": 255,
+        "signal": null
+      },
+      "keepAlive": {
+        "success": false,
+        "duration": 21080,
+        "error": "Command failed: ssh -o ConnectTimeout=30 -o ServerAliveInterval=30 -o BatchMode=yes -i \"C:\\Users\\pc\\.ssh\\melyia_main\" ubuntu@51.91.145.255 \"sleep 60 && echo 'KeepAlive OK'\"\nbanner exchange: Connection to UNKNOWN port -1: Connection timed out\r\n",
+        "exitCode": 255,
+        "signal": null
+      }
+    }
+  },
+  "analysis": {
+    "issues": [
+      "❌ Problème de transfert de fichiers",
+      "❌ Commandes groupées de déploiement échouent",
+      "❌ Problème de maintien de connexion SSH"
+    ],
+    "recommendations": [
+      "Vérifier les permissions et l'espace disque",
+      "Séparer les commandes en phases distinctes",
+      "Configurer ServerAliveInterval et ClientAliveInterval"
+    ]
+  },
+  "summary": {
+    "totalTests": 12,
+    "successfulTests": 5,
+    "failedTests": 7
+  }
+}
