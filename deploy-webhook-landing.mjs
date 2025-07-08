@@ -44,12 +44,12 @@ function validateBuild() {
   }
   
   const files = fs.readdirSync(CONFIG.SOURCE_DIR);
-  const hasIndex = files.includes("index.html");
+  const hasIndex = files.includes("index-landing.html");
   const hasAssets = fs.existsSync(path.join(CONFIG.SOURCE_DIR, "assets"));
   
   if (!hasIndex || !hasAssets) {
     log(`❌ ERREUR: Build incomplete dans ${CONFIG.SOURCE_DIR}`, "red");
-    log(`   - index.html: ${hasIndex ? "✅" : "❌"}`, hasIndex ? "green" : "red");
+    log(`   - index-landing.html: ${hasIndex ? "✅" : "❌"}`, hasIndex ? "green" : "red");
     log(`   - assets/: ${hasAssets ? "✅" : "❌"}`, hasAssets ? "green" : "red");
     process.exit(1);
   }
@@ -94,14 +94,21 @@ async function deployViaWebhook() {
     // Ajouter tous les fichiers
     for (const file of files) {
       const fileBuffer = fs.readFileSync(file.filepath);
+      
+      // Renommer index-landing.html en index.html pour le déploiement
+      let deployFilename = file.name;
+      if (file.name === "index-landing.html") {
+        deployFilename = "index.html";
+      }
+      
       formData.append("files", fileBuffer, {
-        filename: file.name,
-        contentType: file.name.endsWith(".html") ? "text/html" : 
-                     file.name.endsWith(".js") ? "application/javascript" :
-                     file.name.endsWith(".css") ? "text/css" :
+        filename: deployFilename,
+        contentType: deployFilename.endsWith(".html") ? "text/html" : 
+                     deployFilename.endsWith(".js") ? "application/javascript" :
+                     deployFilename.endsWith(".css") ? "text/css" :
                      "application/octet-stream"
       });
-      log(`  📄 ${file.name}`, "cyan");
+      log(`  📄 ${file.name} → ${deployFilename}`, "cyan");
     }
     
     // Envoyer la requête
