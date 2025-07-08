@@ -116,7 +116,7 @@ async function deployViaWebhook() {
     const response = await fetch(CONFIG.WEBHOOK_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${CONFIG.WEBHOOK_TOKEN}`,
+        "x-webhook-token": CONFIG.WEBHOOK_TOKEN,
       },
       body: formData,
       timeout: 30000, // 30 secondes
