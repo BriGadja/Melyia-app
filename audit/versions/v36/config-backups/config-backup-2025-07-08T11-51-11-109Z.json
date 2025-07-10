@@ -1,0 +1,28 @@
+{
+  "timestamp": "2025-07-08T11:51:11.110Z",
+  "version": "v36_backup",
+  "source": "production_llm_settings",
+  "config": {
+    "id": 1,
+    "systemPrompt": "Dentiste français. Réponds en 50 mots max. Sois rassurant et donne un conseil pratique.",
+    "systemPromptUrgence": "Urgence dentaire. Rassure, donne conseil immédiat, oriente vers consultation. 30 mots max.",
+    "temperature": 0.05,
+    "topP": 0.5,
+    "maxTokens": 60,
+    "numCtx": 1024,
+    "stopSequences": [
+      "\n\n",
+      ".",
+      "!"
+    ],
+    "keepAliveMinutes": 60,
+    "timeoutSeconds": 25,
+    "modelName": "llama3.2:3b",
+    "createdAt": "2025-06-25T07:08:39.303Z",
+    "updatedAt": "2025-07-08T09:36:56.890Z"
+  },
+  "metadata": {
+    "backup_reason": "Avant optimisations qualité v36",
+    "rollback_instructions": "Utiliser 'npm run restore-config [fichier]' pour restaurer"
+  }
+}

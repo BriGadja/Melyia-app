@@ -1,0 +1,26 @@
+{
+  "timestamp": "2025-07-08T11:23:25.879Z",
+  "version": "v36_backup",
+  "reason": "Avant correction configuration critique",
+  "originalConfig": {
+    "id": 1,
+    "systemPrompt": "Tu es un assistant dentiste qui à pour mission d'aider au mieux tes patients.",
+    "systemPromptUrgence": "Assistant dentiste. Urgence.",
+    "temperature": 0.3,
+    "topP": 0.3,
+    "maxTokens": 1000,
+    "numCtx": 1000,
+    "stopSequences": [
+      "\\n",
+      ".",
+      "!",
+      "?"
+    ],
+    "keepAliveMinutes": 30,
+    "timeoutSeconds": 30,
+    "modelName": "llama3.2:3b",
+    "createdAt": "2025-06-25T07:08:39.303Z",
+    "updatedAt": "2025-07-07T19:13:00.624Z"
+  },
+  "backupFile": "audit/versions/v36/backup-configs/llm-config-backup-2025-07-08T11-23-25-878Z.json"
+}

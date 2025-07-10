@@ -1,0 +1,737 @@
+{
+  "timestamp": "2025-07-08T11:11:51.826Z",
+  "version": "v36.0",
+  "phase": "audit_initial",
+  "resultats": {
+    "authentification": {
+      "admin": true,
+      "patient": true,
+      "tokens_valides": true
+    },
+    "configuration": {
+      "id": 1,
+      "systemPrompt": "Tu es un assistant dentiste qui à pour mission d'aider au mieux tes patients.",
+      "systemPromptUrgence": "Assistant dentiste. Urgence.",
+      "temperature": 0.3,
+      "topP": 0.3,
+      "maxTokens": 1000,
+      "numCtx": 1000,
+      "stopSequences": [
+        "\\n",
+        ".",
+        "!",
+        "?"
+      ],
+      "keepAliveMinutes": 30,
+      "timeoutSeconds": 30,
+      "modelName": "llama3.2:3b",
+      "createdAt": "2025-06-25T07:08:39.303Z",
+      "updatedAt": "2025-07-07T19:13:00.624Z"
+    },
+    "performance": {
+      "status": {
+        "success": false,
+        "status": "error",
+        "isReady": false,
+        "message": "Service IA indisponible",
+        "timestamp": "2025-07-08T11:11:55.098Z"
+      },
+      "warmup": {
+        "success": true,
+        "status": "ready",
+        "warmupTime": 6782,
+        "isInstant": false,
+        "message": "Chatbot initialisé en 7s",
+        "userId": 4,
+        "timestamp": "2025-07-08T11:12:01.893Z"
+      },
+      "isReady": false
+    },
+    "scenarios": [
+      {
+        "id": "scenario_1",
+        "name": "Post-opératoire extraction",
+        "questions": [
+          {
+            "success": true,
+            "question": "Bonjour, j'ai eu une extraction dentaire hier, j'ai mal. Est-ce normal ?",
+            "response": "Bonjour, je m'excuse pour la longueur du temps que nous avons passé à vous attendre",
+            "processingTime": 22672,
+            "metadata": {
+              "processingTime": "22658ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "urgence",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 40,
+              "analyses": [
+                "✅ Longueur appropriée: 15/150 mots",
+                "✅ Réponse en français",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 15,
+              "details": {
+                "langue": true,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:12:24.572Z"
+          },
+          {
+            "success": false,
+            "question": "Combien de temps va durer la douleur après l'extraction ?",
+            "error": "motsUrgence is not defined",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:12:37.081Z"
+          },
+          {
+            "success": true,
+            "question": "Puis-je manger normalement après l'extraction ?",
+            "response": "Bonjour, je comprends que vous soyez inquiet quant à votre alimentation après l'extraction d'un dent",
+            "processingTime": 9923,
+            "metadata": {
+              "processingTime": "9913ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "urgence",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 60,
+              "analyses": [
+                "✅ Longueur appropriée: 15/150 mots",
+                "✅ Réponse en français",
+                "✅ Contenu médical approprié",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 15,
+              "details": {
+                "langue": true,
+                "medical": true,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:12:49.007Z"
+          },
+          {
+            "success": true,
+            "question": "Le saignement est-il normal après une extraction ?",
+            "response": "Bonjour, je comprends que vous soyez inquiet quant au saignement après l'extraction d'un dent",
+            "processingTime": 9075,
+            "metadata": {
+              "processingTime": "9064ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "urgence",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 60,
+              "analyses": [
+                "✅ Longueur appropriée: 14/150 mots",
+                "✅ Réponse en français",
+                "✅ Contenu médical approprié",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 14,
+              "details": {
+                "langue": true,
+                "medical": true,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:13:00.086Z"
+          }
+        ],
+        "score_moyen": 53,
+        "temps_moyen": 13890,
+        "reussites": 3
+      },
+      {
+        "id": "scenario_2",
+        "name": "Pré-opératoire implant",
+        "questions": [
+          {
+            "success": true,
+            "question": "J'ai rendez-vous la semaine prochaine pour un implant dentaire, que dois-je savoir ?",
+            "response": "Bonjour",
+            "processingTime": 9238,
+            "metadata": {
+              "processingTime": "9229ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:13:11.327Z"
+          },
+          {
+            "success": true,
+            "question": "Comment me préparer pour la pose d'un implant ?",
+            "response": "Bonjour",
+            "processingTime": 4523,
+            "metadata": {
+              "processingTime": "4514ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:13:17.854Z"
+          },
+          {
+            "success": true,
+            "question": "Quels sont les risques d'un implant dentaire ?",
+            "response": "Bonjour",
+            "processingTime": 4572,
+            "metadata": {
+              "processingTime": "4566ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:13:24.428Z"
+          },
+          {
+            "success": true,
+            "question": "Combien de temps dure la cicatrisation d'un implant ?",
+            "response": "Bonjour",
+            "processingTime": 5189,
+            "metadata": {
+              "processingTime": "5183ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:13:31.623Z"
+          }
+        ],
+        "score_moyen": 30,
+        "temps_moyen": 5881,
+        "reussites": 4
+      },
+      {
+        "id": "scenario_3",
+        "name": "Urgence douleur",
+        "questions": [
+          {
+            "success": false,
+            "question": "URGENT: J'ai une douleur dentaire insupportable, que faire ?",
+            "error": "motsUrgence is not defined",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:13:43.604Z"
+          },
+          {
+            "success": false,
+            "question": "Ma dent me fait atrocement mal depuis 2h, aidez-moi !",
+            "error": "motsUrgence is not defined",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:13:53.013Z"
+          },
+          {
+            "success": false,
+            "question": "Douleur intense après plombage hier, normal ?",
+            "error": "motsUrgence is not defined",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:14:03.456Z"
+          }
+        ],
+        "score_moyen": 0,
+        "temps_moyen": 0,
+        "reussites": 0
+      },
+      {
+        "id": "scenario_4",
+        "name": "Soins post-opératoires détaillés",
+        "questions": [
+          {
+            "success": true,
+            "question": "Comment nettoyer ma bouche après une chirurgie gingivale ?",
+            "response": "Bonjour",
+            "processingTime": 8240,
+            "metadata": {
+              "processingTime": "8231ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:14:13.700Z"
+          },
+          {
+            "success": true,
+            "question": "Quels médicaments prendre après mon intervention ?",
+            "response": "Je suis désolé de ne pas avoir accès à votre dossier patient pour fournir une réponse personnalisée",
+            "processingTime": 8391,
+            "metadata": {
+              "processingTime": "8386ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 40,
+              "analyses": [
+                "✅ Longueur appropriée: 17/150 mots",
+                "✅ Réponse en français",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 17,
+              "details": {
+                "langue": true,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:14:24.093Z"
+          },
+          {
+            "success": true,
+            "question": "Quand puis-je reprendre le brossage normal ?",
+            "response": "Bonjour, je suis désolé de vous informer que nous n'avons pas trouvé d'informations pertinentes dans votre dossier patient",
+            "processingTime": 12102,
+            "metadata": {
+              "processingTime": "12097ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "urgence",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 40,
+              "analyses": [
+                "✅ Longueur appropriée: 18/150 mots",
+                "✅ Réponse en français",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 18,
+              "details": {
+                "langue": true,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:14:38.198Z"
+          },
+          {
+            "success": true,
+            "question": "Les fils de suture, quand tombent-ils ?",
+            "response": "Bonjour",
+            "processingTime": 7916,
+            "metadata": {
+              "processingTime": "7911ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:14:48.118Z"
+          }
+        ],
+        "score_moyen": 35,
+        "temps_moyen": 9162,
+        "reussites": 4
+      },
+      {
+        "id": "scenario_5",
+        "name": "Questions générales prévention",
+        "questions": [
+          {
+            "success": true,
+            "question": "Comment bien se brosser les dents ?",
+            "response": "Bonjour",
+            "processingTime": 4381,
+            "metadata": {
+              "processingTime": "4375ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:14:54.501Z"
+          },
+          {
+            "success": true,
+            "question": "À quelle fréquence dois-je consulter mon dentiste ?",
+            "response": "Bonjour",
+            "processingTime": 4669,
+            "metadata": {
+              "processingTime": "4663ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:15:01.173Z"
+          },
+          {
+            "success": true,
+            "question": "Les bains de bouche sont-ils utiles ?",
+            "response": "Bonjour",
+            "processingTime": 4446,
+            "metadata": {
+              "processingTime": "4440ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:15:07.622Z"
+          },
+          {
+            "success": true,
+            "question": "Comment prévenir les caries ?",
+            "response": "Bonjour",
+            "processingTime": 3829,
+            "metadata": {
+              "processingTime": "3823ms",
+              "isLocal": true,
+              "model": "llama3.2:3b",
+              "architecture": "OLLAMA_DYNAMIC_CONFIG",
+              "documentsUsed": 0,
+              "intent": "general",
+              "configUsed": {
+                "temperature": 0.3,
+                "maxTokens": 1000,
+                "keepAlive": "30m",
+                "timeout": "30s"
+              }
+            },
+            "qualite": {
+              "score": 30,
+              "analyses": [
+                "✅ Longueur appropriée: 1/150 mots",
+                "❌ Langue incorrecte ou caractères manquants",
+                "❌ Manque de contenu médical spécialisé",
+                "⚠️ Manque de ton rassurant",
+                "✅ Pas d'urgence injustifiée",
+                "⚠️ Manque de conseils pratiques"
+              ],
+              "nombreMots": 1,
+              "details": {
+                "langue": false,
+                "medical": false,
+                "rassurant": false,
+                "pratique": false,
+                "urgence": null
+              }
+            },
+            "timestamp": "2025-07-08T11:15:13.456Z"
+          }
+        ],
+        "score_moyen": 30,
+        "temps_moyen": 4331,
+        "reussites": 4
+      }
+    ]
+  },
+  "score_global": 30,
+  "recommandations": [
+    "🔴 CRITIQUE: Score global insuffisant pour usage médical (< 70/100)",
+    "⚠️ Temps de réponse trop lent (> 5s) - Optimiser Ollama",
+    "📝 Max tokens trop élevé - Limiter à 150 pour concision",
+    "🎯 Améliorer scénario \"Post-opératoire extraction\" (53/100)",
+    "🎯 Améliorer scénario \"Pré-opératoire implant\" (30/100)",
+    "🎯 Améliorer scénario \"Urgence douleur\" (0/100)",
+    "🎯 Améliorer scénario \"Soins post-opératoires détaillés\" (35/100)",
+    "🎯 Améliorer scénario \"Questions générales prévention\" (30/100)"
+  ]
+}

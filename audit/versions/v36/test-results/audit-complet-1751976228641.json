@@ -1,0 +1,239 @@
+{
+  "timestamp": "2025-07-08T11:53:29.606Z",
+  "version": "v36.0",
+  "phase": "audit_initial",
+  "resultats": {
+    "authentification": {
+      "admin": true,
+      "patient": true,
+      "tokens_valides": true
+    },
+    "configuration": {
+      "id": 1,
+      "systemPrompt": "Tu es un assistant dentaire français expert et bienveillant. \nAnalyse le dossier patient et réponds de manière:\n- Professionnelle et rassurante\n- Précise médicalement  \n- Avec conseils pratiques concrets\n- En 80-120 mots maximum\n\nToujours orienter vers consultation si nécessaire.",
+      "systemPromptUrgence": "URGENCE DENTAIRE - Assistant expert français.\nÉvalue rapidement la situation et:\n- Rassure le patient\n- Donne conseil immédiat de soulagement\n- Indique quand consulter EN URGENCE\n- Sois précis et rassurant\n- 60-90 mots maximum\n\nSi douleur intense ou trauma: consultation immédiate obligatoire.",
+      "temperature": 0.3,
+      "topP": 0.9,
+      "maxTokens": 150,
+      "numCtx": 2048,
+      "stopSequences": [
+        "\\n\\n\\n",
+        "---",
+        "QUESTION:"
+      ],
+      "keepAliveMinutes": 45,
+      "timeoutSeconds": 35,
+      "modelName": "llama3.2:3b",
+      "createdAt": "2025-06-25T07:08:39.303Z",
+      "updatedAt": "2025-07-08T09:53:09.528Z"
+    },
+    "performance": {
+      "status": {
+        "success": false,
+        "status": "error",
+        "isReady": false,
+        "message": "Service IA indisponible",
+        "timestamp": "2025-07-08T11:53:32.904Z"
+      },
+      "warmup": {
+        "success": true,
+        "status": "ready",
+        "warmupTime": 7083,
+        "isInstant": false,
+        "message": "Chatbot initialisé en 7s",
+        "userId": 4,
+        "timestamp": "2025-07-08T11:53:39.997Z"
+      },
+      "isReady": false
+    },
+    "scenarios": [
+      {
+        "id": "scenario_1",
+        "name": "Post-opératoire extraction",
+        "questions": [
+          {
+            "success": false,
+            "question": "Bonjour, j'ai eu une extraction dentaire hier, j'ai mal. Est-ce normal ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:54:10.037Z"
+          },
+          {
+            "success": false,
+            "question": "Combien de temps va durer la douleur après l'extraction ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:54:42.073Z"
+          },
+          {
+            "success": false,
+            "question": "Puis-je manger normalement après l'extraction ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:55:14.108Z"
+          },
+          {
+            "success": false,
+            "question": "Le saignement est-il normal après une extraction ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:55:46.148Z"
+          }
+        ],
+        "score_moyen": 0,
+        "temps_moyen": 0,
+        "reussites": 0
+      },
+      {
+        "id": "scenario_2",
+        "name": "Pré-opératoire implant",
+        "questions": [
+          {
+            "success": false,
+            "question": "J'ai rendez-vous la semaine prochaine pour un implant dentaire, que dois-je savoir ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:56:18.184Z"
+          },
+          {
+            "success": false,
+            "question": "Comment me préparer pour la pose d'un implant ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:56:50.215Z"
+          },
+          {
+            "success": false,
+            "question": "Quels sont les risques d'un implant dentaire ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:57:22.247Z"
+          },
+          {
+            "success": false,
+            "question": "Combien de temps dure la cicatrisation d'un implant ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:57:54.278Z"
+          }
+        ],
+        "score_moyen": 0,
+        "temps_moyen": 0,
+        "reussites": 0
+      },
+      {
+        "id": "scenario_3",
+        "name": "Urgence douleur",
+        "questions": [
+          {
+            "success": false,
+            "question": "URGENT: J'ai une douleur dentaire insupportable, que faire ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:58:26.313Z"
+          },
+          {
+            "success": false,
+            "question": "Ma dent me fait atrocement mal depuis 2h, aidez-moi !",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:58:58.348Z"
+          },
+          {
+            "success": false,
+            "question": "Douleur intense après plombage hier, normal ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T11:59:30.380Z"
+          }
+        ],
+        "score_moyen": 0,
+        "temps_moyen": 0,
+        "reussites": 0
+      },
+      {
+        "id": "scenario_4",
+        "name": "Soins post-opératoires détaillés",
+        "questions": [
+          {
+            "success": false,
+            "question": "Comment nettoyer ma bouche après une chirurgie gingivale ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T12:00:02.411Z"
+          },
+          {
+            "success": false,
+            "question": "Quels médicaments prendre après mon intervention ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T12:00:34.441Z"
+          },
+          {
+            "success": false,
+            "question": "Quand puis-je reprendre le brossage normal ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T12:01:06.475Z"
+          },
+          {
+            "success": false,
+            "question": "Les fils de suture, quand tombent-ils ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T12:01:38.505Z"
+          }
+        ],
+        "score_moyen": 0,
+        "temps_moyen": 0,
+        "reussites": 0
+      },
+      {
+        "id": "scenario_5",
+        "name": "Questions générales prévention",
+        "questions": [
+          {
+            "success": false,
+            "question": "Comment bien se brosser les dents ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T12:02:10.540Z"
+          },
+          {
+            "success": false,
+            "question": "À quelle fréquence dois-je consulter mon dentiste ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T12:02:42.573Z"
+          },
+          {
+            "success": false,
+            "question": "Les bains de bouche sont-ils utiles ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T12:03:14.607Z"
+          },
+          {
+            "success": false,
+            "question": "Comment prévenir les caries ?",
+            "error": "timeout of 30000ms exceeded",
+            "processingTime": 0,
+            "timestamp": "2025-07-08T12:03:46.638Z"
+          }
+        ],
+        "score_moyen": 0,
+        "temps_moyen": 0,
+        "reussites": 0
+      }
+    ]
+  },
+  "score_global": 0,
+  "recommandations": [
+    "🔴 CRITIQUE: Score global insuffisant pour usage médical (< 70/100)",
+    "🎯 Améliorer scénario \"Post-opératoire extraction\" (0/100)",
+    "🎯 Améliorer scénario \"Pré-opératoire implant\" (0/100)",
+    "🎯 Améliorer scénario \"Urgence douleur\" (0/100)",
+    "🎯 Améliorer scénario \"Soins post-opératoires détaillés\" (0/100)",
+    "🎯 Améliorer scénario \"Questions générales prévention\" (0/100)"
+  ]
+}

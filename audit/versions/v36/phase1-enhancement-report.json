@@ -1,0 +1,121 @@
+{
+  "timestamp": "2025-07-09T18:54:41.873Z",
+  "phase": "Phase 1: Medical Knowledge Base Enhancement",
+  "overall_status": "COMPLETED",
+  "components": {
+    "medical_knowledge_base": {
+      "dental-procedures.json": {
+        "exists": true,
+        "size": 3,
+        "hasContent": true
+      },
+      "medical-terminology.json": {
+        "exists": true,
+        "size": 7,
+        "hasContent": true
+      },
+      "post-operative-care.json": {
+        "exists": true,
+        "size": 7,
+        "hasContent": true
+      }
+    },
+    "rag_enhancements": {
+      "medical-embeddings.js": {
+        "exists": true,
+        "size": 10964,
+        "hasClasses": true,
+        "hasExports": true
+      },
+      "context-weighting.js": {
+        "exists": true,
+        "size": 11925,
+        "hasClasses": true,
+        "hasExports": true
+      },
+      "response-cache.js": {
+        "exists": true,
+        "size": 11976,
+        "hasClasses": true,
+        "hasExports": true
+      },
+      "quality-validator.js": {
+        "exists": true,
+        "size": 20636,
+        "hasClasses": true,
+        "hasExports": true
+      }
+    },
+    "gdpr_compliance": {
+      "data-anonymization.js": {
+        "exists": true,
+        "size": 15492,
+        "hasClasses": true,
+        "hasExports": true
+      },
+      "audit-logging.js": {
+        "exists": true,
+        "size": 20745,
+        "hasClasses": true,
+        "hasExports": true
+      },
+      "consent-management.js": {
+        "exists": true,
+        "size": 27122,
+        "hasClasses": true,
+        "hasExports": true
+      }
+    }
+  },
+  "chatbot_quality": {
+    "tests_performed": 6,
+    "successful_tests": 6,
+    "avg_quality_score": 24.166666666666668,
+    "medical_terms_coverage": 0.3333333333333333,
+    "disclaimer_coverage": 33.33333333333333
+  },
+  "performance_metrics": {
+    "avgResponseTime": 8775.8,
+    "maxResponseTime": 11023,
+    "minResponseTime": 6498,
+    "successRate": 1,
+    "performanceGoalMet": false,
+    "details": [
+      {
+        "query": "Bonjour, j'ai mal aux dents",
+        "processingTime": 10339,
+        "success": true,
+        "responseLength": 7
+      },
+      {
+        "query": "Qu'est-ce qu'une carie ?",
+        "processingTime": 11023,
+        "success": true,
+        "responseLength": 103
+      },
+      {
+        "query": "Comment bien se brosser les dents ?",
+        "processingTime": 7790,
+        "success": true,
+        "responseLength": 81
+      },
+      {
+        "query": "Quand consulter un dentiste ?",
+        "processingTime": 8229,
+        "success": true,
+        "responseLength": 117
+      },
+      {
+        "query": "Combien coûte un détartrage ?",
+        "processingTime": 6498,
+        "success": true,
+        "responseLength": 72
+      }
+    ]
+  },
+  "recommendations": [
+    "Améliorer la qualité des réponses (score actuel: 24/100)",
+    "Optimiser les temps de réponse (actuel: 8776ms)",
+    "Améliorer la couverture des disclaimers médicaux"
+  ]
+}
