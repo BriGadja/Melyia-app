@@ -3,8 +3,8 @@
 
 import fs from "fs";
 import path from "path";
+import axios from "axios";
 import FormData from "form-data";
-import fetch from "node-fetch";
 
 const CONFIG = {
   WEBHOOK_URL: "https://app-dev.melyia.com/hooks/deploy",
@@ -111,20 +111,21 @@ async function deployViaWebhook() {
       log(`  📄 ${file.name} → ${deployFilename}`, "cyan");
     }
     
-    // Envoyer la requête
+    // Envoyer la requête avec axios
     log("📤 Envoi vers le serveur...", "blue");
-    const response = await fetch(CONFIG.WEBHOOK_URL, {
-      method: "POST",
+    const response = await axios.post(CONFIG.WEBHOOK_URL, formData, {
       headers: {
+        ...formData.getHeaders(),
         "x-webhook-token": CONFIG.WEBHOOK_TOKEN,
       },
-      body: formData,
       timeout: 30000, // 30 secondes
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity
     });
     
-    const result = await response.json();
+    const result = response.data;
     
-    if (response.ok && result.success) {
+    if (result.success) {
       log("✅ DÉPLOIEMENT LANDING RÉUSSI !", "green");
       log(`🌐 Site: https://${CONFIG.TARGET_SITE}`, "green");
       log(`📊 Fichiers déployés: ${result.files?.length || files.length}`, "green");
@@ -133,18 +134,25 @@ async function deployViaWebhook() {
         log(`🎯 Assets: ${result.structure.assetsCount} fichiers`, "cyan");
       }
     } else {
-      throw new Error(`Webhook error: ${result.message || response.statusText}`);
+      throw new Error(`Webhook error: ${result.message || "Erreur inconnue"}`);
     }
     
   } catch (error) {
     log(`❌ ERREUR DÉPLOIEMENT: ${error.message}`, "red");
     
-    if (error.code === "ECONNREFUSED") {
+    if (error.response) {
+      log(`📋 Status: ${error.response.status}`, "red");
+      log(`📋 Message: ${error.response.data?.message || error.response.statusText}`, "red");
+      
+      if (error.response.status === 401) {
+        log("💡 Token invalide - vérifiez VITE_WEBHOOK_TOKEN", "yellow");
+      } else if (error.response.status === 500) {
+        log("💡 Erreur serveur - vérifiez les logs du serveur", "yellow");
+      }
+    } else if (error.code === "ECONNREFUSED") {
       log("💡 Serveur inaccessible - vérifiez la connectivité", "yellow");
     } else if (error.code === "ETIMEDOUT") {
       log("💡 Timeout - réessayez dans quelques minutes", "yellow");
-    } else if (error.message.includes("401")) {
-      log("💡 Token invalide - vérifiez VITE_WEBHOOK_TOKEN", "yellow");
     }
     
     process.exit(1);
@@ -169,4 +177,4 @@ async function main() {
   }
 }
 
-main(); 
+main();
